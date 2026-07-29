@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Edotco &middot; PAT Inspector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<!-- Excel/PDF export libraries are NOT loaded here. Loading them eagerly on a
+     file:// page (opened locally rather than from a real server) can hang or
+     get blocked by mobile Safari's stricter local-file network rules, and in
+     the worst case that can stop the WHOLE page's JavaScript from running.
+     Instead they're injected on demand, only when Export/Download is actually
+     clicked — see loadScriptOnce() below. The core app needs zero network
+     access to open and work. -->
+<style>
+:root{
+  --bg:#0d141c;
+  --bg-panel:#131e29;
+  --bg-elevated:#1a2733;
+  --bg-elevated-2:#20303e;
+  --border:#25384a;
+  --border-soft:#1c2b39;
+  --text:#eaf0f6;
+  --text-dim:#8fa3b5;
+  --text-faint:#5c7385;
+  --accent:#ff7a29;
+  --accent-dim:#c95f1e;
+  --accent-hover:#ff8a45;
+  --accent-ink:#180a02;
+  --accent-soft:rgba(255,122,41,0.14);
+  --hairline:rgba(255,255,255,0.012);
+  --hero-glow:rgba(255,122,41,0.05);
+  --pass:#33c17a;
+  --pass-soft:rgba(51,193,122,0.14);
+  --fail:#ff5c5c;
+  --fail-soft:rgba(255,92,92,0.14);
+  --na:#6b7f91;
+  --na-soft:rgba(107,127,145,0.14);
+  --sev-a:#ff5c5c;
+  --sev-a-soft:rgba(255,92,92,0.16);
+  --sev-b:#f5b14c;
+  --sev-b-soft:rgba(245,177,76,0.16);
+  --radius:10px;
+  --mono:'IBM Plex Mono', ui-monospace, monospace;
+  --sans:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+body[data-theme="light"]{
+  --bg:#f4faf6;
+  --bg-panel:#ffffff;
+  --bg-elevated:#eef7f1;
+  --bg-elevated-2:#e1efe5;
+  --border:#cfe4d7;
+  --border-soft:#e1eee6;
+  --text:#0f2419;
+  --text-dim:#4d6a5b;
+  --text-faint:#87a294;
+  --accent:#157a41;
+  --accent-dim:#0e5c30;
+  --accent-hover:#1c9750;
+  --accent-ink:#ffffff;
+  --accent-soft:rgba(21,122,65,0.10);
+  --hairline:rgba(15,50,30,0.028);
+  --hero-glow:rgba(31,173,75,0.10);
+  --pass:#1fad4b;
+  --pass-soft:rgba(31,173,75,0.13);
+  --fail:#c9433f;
+  --fail-soft:rgba(201,67,63,0.10);
+  --na:#6b8577;
+  --na-soft:rgba(107,133,119,0.12);
+  --sev-a:#c9433f;
+  --sev-a-soft:rgba(201,67,63,0.12);
+  --sev-b:#a3790f;
+  --sev-b-soft:rgba(163,121,15,0.14);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;height:100%;}
+input,select,textarea,button{-webkit-appearance:none;appearance:none;}
+select{
+  background-color:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:8px;
+  padding:8px 28px 8px 10px;font-size:13.5px;font-family:var(--sans);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fa3b5' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;background-size:14px;
+}
+/* iOS Safari zooms the page when a focused input's font-size is under 16px — keep
+   phone-width inputs at 16px so tapping a field doesn't jolt the whole layout. */
+@media(max-width:640px){
+  .f-field input,.f-field select,.f-field textarea,.remark-input,table.dtable input,.mini-select,.filter-bar input,.filter-bar select,#adminPw,.login-wrap input{
+    font-size:16px !important;
+  }
+}
+body{
+  background:var(--bg);
+  background-image:
+    linear-gradient(180deg, var(--hero-glow) 0%, transparent 320px),
+    repeating-linear-gradient(135deg, var(--hairline) 0px, var(--hairline) 1px, transparent 1px, transparent 26px);
+  color:var(--text);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+::selection{background:var(--accent-soft);color:var(--accent);}
+button{font-family:var(--sans);cursor:pointer;}
+input,select,textarea{font-family:var(--sans);}
+a{color:var(--accent);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------- layout shells ---------- */
+#app{min-height:100vh;display:flex;flex-direction:column;}
+.topbar{
+  display:flex;align-items:center;gap:14px;
+  padding:calc(14px + env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 14px max(22px, env(safe-area-inset-left));
+  border-bottom:1px solid var(--border-soft);
+  background:linear-gradient(180deg, var(--bg-panel), rgba(19,30,41,0.7));
+  position:sticky;top:0;z-index:40;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.brand{display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none;}
+.brand-mark{width:30px;height:30px;flex:none;}
+.brand-mark-chip{
+  width:34px;height:34px;flex:none;border-radius:8px;background:#ffffff;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;padding:4px;
+}
+.brand-mark-chip img{width:100%;height:100%;object-fit:contain;}
+.theme-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none;}
+.theme-toggle button{
+  display:flex;align-items:center;justify-content:center;border:none;background:var(--bg-elevated);color:var(--text-faint);
+  padding:7px 9px;border-right:1px solid var(--border);
+}
+.theme-toggle button:last-child{border-right:none;}
+.theme-toggle button.active{background:var(--accent-soft);color:var(--accent);}
+.theme-toggle svg{width:14px;height:14px;}
+.brand-text{display:flex;flex-direction:column;line-height:1.1;}
+.brand-text b{font-size:14.5px;letter-spacing:0.2px;}
+.brand-text span{font-size:10.5px;color:var(--text-faint);font-family:var(--mono);letter-spacing:0.6px;text-transform:uppercase;}
+.topbar-spacer{flex:1;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.pill{
+  font-family:var(--mono);font-size:11px;padding:5px 10px;border-radius:20px;
+  border:1px solid var(--border);color:var(--text-dim);white-space:nowrap;
+}
+.main{flex:1;padding:26px max(22px, env(safe-area-inset-right)) calc(70px + env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));max-width:1180px;margin:0 auto;width:100%;}
+.main.wide{max-width:1400px;}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;justify-content:center;
+  padding:10px 16px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg-elevated);color:var(--text);font-size:13.5px;font-weight:600;
+  transition:all .12s ease;white-space:nowrap;
+}
+.btn:hover{border-color:var(--text-faint);background:var(--bg-elevated-2);}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--text-dim);}
+.btn-ghost:hover{background:var(--bg-elevated);color:var(--text);}
+.btn-danger{background:transparent;border-color:var(--fail);color:var(--fail);}
+.btn-danger:hover{background:var(--fail-soft);}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:7px;}
+.btn-block{width:100%;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.icon{width:15px;height:15px;flex:none;}
+
+/* ---------- home ---------- */
+.hero{
+  padding:54px 8px 40px;text-align:left;position:relative;
+}
+.hero-eyebrow{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:2px;color:var(--accent);
+  text-transform:uppercase;display:flex;align-items:center;gap:9px;margin-bottom:16px;
+}
+.hero-eyebrow::before{content:"";width:22px;height:1px;background:var(--accent);}
+.hero h1{font-size:clamp(28px,4.2vw,44px);line-height:1.08;margin:0 0 14px;font-weight:800;letter-spacing:-0.5px;}
+.hero h1 em{font-style:normal;color:var(--accent);}
+.hero p{color:var(--text-dim);font-size:15.5px;max-width:560px;line-height:1.6;margin:0 0 30px;}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px;}
+@media(max-width:640px){.role-grid{grid-template-columns:1fr;}}
+.role-card{
+  background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;
+  padding:24px;text-align:left;transition:all .15s ease;position:relative;overflow:hidden;
+}
+.role-card:hover{border-color:var(--accent-dim);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,0.35);}
+.role-card .rc-index{font-family:var(--mono);font-size:11px;color:var(--text-faint);letter-spacing:1px;}
+.role-card h3{font-size:18px;margin:10px 0 8px;font-weight:700;}
+.role-card p{color:var(--text-dim);font-size:13px;line-height:1.55;margin:0 0 18px;}
+.tower-rail{
+  position:absolute;right:-6px;top:-6px;width:90px;height:90px;opacity:0.10;
+}
+
+/* ---------- accordion / cards ---------- */
+.card{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;}
+.section-block{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;background:var(--bg-panel);}
+.section-head{
+  display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;user-select:none;
+  background:var(--bg-elevated);
+}
+.section-head:hover{background:var(--bg-elevated-2);}
+.sec-letter{
+  font-family:var(--mono);font-weight:700;font-size:14px;width:30px;height:30px;flex:none;
+  border-radius:7px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-dim);
+}
+.section-head .st{flex:1;}
+.section-head .st b{font-size:14.5px;display:block;}
+.section-head .st span{font-size:11.5px;color:var(--text-faint);font-family:var(--mono);}
+.sec-progress{width:64px;height:5px;border-radius:4px;background:var(--bg-elevated-2);overflow:hidden;flex:none;}
+.sec-progress i{display:block;height:100%;background:var(--pass);}
+.chev{transition:transform .18s ease;color:var(--text-faint);flex:none;}
+.section-block.open .chev{transform:rotate(180deg);}
+.section-body{display:none;padding:6px 14px 14px;}
+.section-block.open .section-body{display:block;}
+
+.item-row{
+  border:1px solid var(--border-soft);border-radius:10px;padding:14px;margin-top:10px;background:var(--bg);
+}
+.item-top{display:flex;gap:10px;align-items:flex-start;}
+.item-no{font-family:var(--mono);color:var(--text-faint);font-size:12px;flex:none;width:22px;padding-top:2px;}
+.item-text{flex:1;font-size:13.6px;line-height:1.5;color:var(--text);}
+.sev-tag{
+  flex:none;font-family:var(--mono);font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:5px;
+  letter-spacing:0.5px;
+}
+.sev-tag.A{background:var(--sev-a-soft);color:var(--sev-a);border:1px solid rgba(255,92,92,0.35);}
+.sev-tag.B{background:var(--sev-b-soft);color:var(--sev-b);border:1px solid rgba(245,177,76,0.35);}
+.item-controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+.field-mini{display:flex;flex-direction:column;gap:5px;}
+.field-mini label{font-size:10.5px;color:var(--text-faint);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.seg button{
+  border:none;background:var(--bg-elevated);color:var(--text-dim);font-size:12px;font-weight:600;
+  padding:7px 12px;border-right:1px solid var(--border);
+}
+.seg button:last-child{border-right:none;}
+.seg button.active[data-v="Pass"]{background:var(--pass-soft);color:var(--pass);}
+.seg button.active[data-v="Fail"]{background:var(--fail-soft);color:var(--fail);}
+.seg button.active[data-v="N/A"]{background:var(--na-soft);color:var(--na);}
+.remark-input{
+  flex:1;min-width:220px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);padding:8px 10px;font-size:12.5px;resize:vertical;min-height:36px;
+}
+.remark-input:focus{outline:none;border-color:var(--accent-dim);}
+.photo-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;}
+.photo-thumb{
+  position:relative;width:56px;height:56px;border-radius:7px;overflow:hidden;border:1px solid var(--border);flex:none;
+}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
+.photo-thumb .rm{
+  position:absolute;top:1px;right:1px;width:16px;height:16px;background:rgba(10,10,10,0.75);color:#fff;
+  border:none;border-radius:4px;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;
+}
+.photo-add{
+  width:56px;height:56px;border-radius:7px;border:1.5px dashed var(--border);background:transparent;color:var(--text-faint);
+  display:flex;align-items:center;justify-content:center;font-size:19px;flex:none;
+}
+.photo-add:hover{border-color:var(--accent-dim);color:var(--accent);}
+.photo-btns{display:flex;gap:6px;}
+
+/* ---------- forms/grid ---------- */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+@media(max-width:800px){.form-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:520px){.form-grid{grid-template-columns:1fr;}}
+.f-field{display:flex;flex-direction:column;gap:6px;}
+.f-field label{font-size:11px;color:var(--text-faint);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;}
+.f-field input,.f-field select,.f-field textarea{
+  background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);
+  padding:9px 11px;font-size:13.5px;
+}
+.f-field input:focus,.f-field select:focus,.f-field textarea:focus{outline:none;border-color:var(--accent-dim);}
+.f-field input[type="date"]{color-scheme:dark;cursor:pointer;}
+.f-field input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer;filter:invert(0.85) brightness(1.3);padding:2px;border-radius:4px;}
+.f-field input[type="date"]::-webkit-calendar-picker-indicator:hover{background:var(--bg-elevated-2);}
+body[data-theme="light"] .f-field input[type="date"]{color-scheme:light;}
+body[data-theme="light"] .f-field input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
+.f-field.span2{grid-column:span 2;}
+@media(max-width:520px){.f-field.span2{grid-column:span 1;}}
+.f-field.span3{grid-column:span 3;}
+@media(max-width:800px){.f-field.span3{grid-column:span 2;}}
+@media(max-width:520px){.f-field.span3{grid-column:span 1;}}
+.chip-select{display:flex;flex-wrap:wrap;gap:8px;}
+.chip-opt{
+  padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elevated);
+  font-size:12.5px;color:var(--text-dim);font-weight:600;
+}
+.chip-opt.active{background:var(--accent-soft);border-color:var(--accent-dim);color:var(--accent);}
+
+/* ---------- tabs ---------- */
+.tabbar{display:flex;gap:6px;border-bottom:1px solid var(--border-soft);margin-bottom:20px;overflow-x:auto;}
+.tabbtn{
+  padding:11px 15px;font-size:13px;font-weight:600;color:var(--text-faint);border:none;background:none;
+  border-bottom:2px solid transparent;white-space:nowrap;
+}
+.tabbtn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.subtabbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.subtab{
+  padding:7px 13px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);
+  background:var(--bg-elevated);color:var(--text-dim);
+}
+.subtab.active{background:var(--accent-soft);border-color:var(--accent-dim);color:var(--accent);}
+
+/* ---------- editor header ---------- */
+.editor-topbar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border-soft);
+}
+.editor-title{flex:1;min-width:200px;}
+.editor-title .eid{font-family:var(--mono);color:var(--accent);font-size:12px;letter-spacing:0.5px;}
+.editor-title h2{margin:3px 0 0;font-size:20px;}
+.status-badge{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:0.5px;
+  text-transform:uppercase;
+}
+.status-badge.draft{background:var(--na-soft);color:var(--na);}
+.status-badge.accepted{background:var(--pass-soft);color:var(--pass);}
+.status-badge.comments{background:var(--sev-b-soft);color:var(--sev-b);}
+.status-badge.rejected{background:var(--fail-soft);color:var(--fail);}
+.save-indicator{font-size:11px;color:var(--text-faint);font-family:var(--mono);}
+
+/* ---------- progress summary strip ---------- */
+.stat-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px;}
+.export-row{display:flex;gap:10px;flex-wrap:wrap;margin:-10px 0 20px;}
+@media(max-width:800px){.stat-strip{grid-template-columns:repeat(2,1fr);}}
+.stat-box{background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.stat-box b{display:block;font-size:22px;font-family:var(--mono);}
+.stat-box span{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.6px;}
+.stat-box.pass b{color:var(--pass);}
+.stat-box.fail b{color:var(--fail);}
+.stat-box.sevA b{color:var(--sev-a);}
+
+/* ---------- table ---------- */
+table.dtable{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.dtable th{
+  text-align:left;font-family:var(--mono);font-size:10.5px;color:var(--text-faint);text-transform:uppercase;
+  letter-spacing:0.5px;padding:8px 8px;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+table.dtable td{padding:7px 8px;border-bottom:1px solid var(--border-soft);vertical-align:middle;}
+table.dtable input{width:64px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 6px;font-size:12px;}
+table.dtable tr:hover td{background:rgba(255,255,255,0.015);}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+.table-wrap table{margin:0;}
+.mini-select{background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 6px;font-size:11.5px;}
+
+/* ---------- site list ---------- */
+.site-list{display:flex;flex-direction:column;gap:10px;}
+.site-item{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg-panel);border:1px solid var(--border);
+  border-radius:10px;cursor:pointer;transition:border-color .12s;
+}
+.site-item:hover{border-color:var(--accent-dim);}
+.site-item .si-id{font-family:var(--mono);font-size:12px;color:var(--accent);width:90px;flex:none;}
+.site-item .si-name{flex:1;min-width:120px;}
+.site-item .si-name b{font-size:14px;display:block;}
+.site-item .si-name span{font-size:11.5px;color:var(--text-faint);}
+.site-item .si-meta{display:flex;gap:18px;align-items:center;}
+.progress-ring{width:36px;height:36px;flex:none;}
+.empty-state{padding:60px 20px;text-align:center;color:var(--text-faint);}
+.empty-state svg{width:46px;height:46px;opacity:0.3;margin-bottom:14px;}
+
+/* ---------- login ---------- */
+.login-wrap{max-width:380px;margin:90px auto;padding:32px;background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;text-align:center;}
+.login-wrap .lock{width:38px;height:38px;margin:0 auto 16px;color:var(--accent);}
+.login-wrap h2{margin:0 0 6px;font-size:19px;}
+.login-wrap p{color:var(--text-faint);font-size:12.5px;margin:0 0 22px;}
+.login-wrap input{
+  width:100%;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);
+  padding:11px 13px;font-size:14px;text-align:center;letter-spacing:2px;margin-bottom:12px;font-family:var(--mono);
+}
+.login-err{color:var(--fail);font-size:12px;margin-bottom:10px;min-height:14px;}
+
+/* ---------- kpi ---------- */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+.kpi{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:18px 18px;position:relative;overflow:hidden;}
+.kpi span{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.7px;font-family:var(--mono);}
+.kpi b{display:block;font-size:28px;margin-top:6px;font-family:var(--mono);}
+.kpi.accent b{color:var(--accent);}
+.kpi.pass b{color:var(--pass);}
+.kpi.fail b{color:var(--fail);}
+.kpi.warn b{color:var(--sev-b);}
+
+.section-title{display:flex;align-items:center;gap:10px;margin:34px 0 16px;}
+.section-title h3{font-size:16px;margin:0;}
+.section-title .line{flex:1;height:1px;background:var(--border);}
+
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+.filter-bar input,.filter-bar select{
+  background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);
+  padding:8px 12px;font-size:12.5px;
+}
+.badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px;}
+.badge.open{background:var(--fail-soft);color:var(--fail);}
+.badge.resolved{background:var(--pass-soft);color:var(--pass);}
+
+/* ---------- modal ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(4,8,12,0.72);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);}
+.modal-bg.open{display:flex;}
+.modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;max-width:960px;width:100%;max-height:88vh;overflow-y:auto;padding:0;}
+.modal-head{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border-soft);position:sticky;top:0;background:var(--bg-panel);z-index:2;flex-wrap:wrap;}
+.modal-body{padding:22px;}
+.img-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.88);display:none;align-items:center;justify-content:center;z-index:200;padding:30px;}
+.img-modal-bg.open{display:flex;}
+.img-modal-bg img{max-width:100%;max-height:100%;border-radius:8px;}
+
+/* ---------- signature ---------- */
+.sig-pad{border:1px solid var(--border);border-radius:8px;background:var(--bg);touch-action:none;width:100%;height:130px;display:block;}
+.sig-wrap{display:flex;flex-direction:column;gap:8px;}
+
+/* ---------- viewport toggle (desktop/mobile simulation) ---------- */
+.vp-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none;}
+.vp-toggle button{
+  display:flex;align-items:center;gap:6px;border:none;background:var(--bg-elevated);color:var(--text-faint);
+  padding:7px 11px;font-size:11.5px;font-weight:600;border-right:1px solid var(--border);
+}
+.vp-toggle button:last-child{border-right:none;}
+.vp-toggle button.active{background:var(--accent-soft);color:var(--accent);}
+.vp-toggle svg{width:14px;height:14px;}
+body.force-mobile{
+  display:flex;justify-content:center;padding:26px 10px;background:#070b10;
+  background-image:repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 26px);
+}
+body.force-mobile #app{
+  max-width:428px;width:428px;min-height:860px;border:1px solid var(--border);border-radius:32px;
+  overflow-y:auto;overflow-x:hidden;box-shadow:0 40px 90px rgba(0,0,0,0.65), 0 0 0 6px #05070a;
+  position:relative;max-height:900px;
+}
+body.force-mobile .main{padding:20px 14px 60px;}
+body.force-mobile .form-grid{grid-template-columns:1fr 1fr;}
+body.force-mobile .f-field.span2,body.force-mobile .f-field.span3{grid-column:span 2;}
+body.force-mobile .kpi-grid{grid-template-columns:repeat(2,1fr);}
+body.force-mobile .stat-strip{grid-template-columns:repeat(2,1fr);}
+body.force-mobile .role-grid{grid-template-columns:1fr;}
+body.force-mobile .hero{padding:30px 4px 20px;}
+body.force-mobile table.dtable{font-size:11.5px;}
+
+.foot-note{margin-top:40px;padding-top:18px;border-top:1px solid var(--border-soft);color:var(--text-faint);font-size:11.5px;text-align:center;}
+
+/* ---------- scoped styles for the hidden PDF render root (mirrors PRINT_CSS, monochrome) ---------- */
+#pdfRenderRoot{font-family:Arial, Helvetica, sans-serif; color:#0a0a0a; font-size:11px; background:#fff;}
+#pdfRenderRoot *{box-sizing:border-box;}
+#pdfRenderRoot .doc-page{padding:18px; background:#fff;}
+#pdfRenderRoot .doc-title{font-size:17px;font-weight:800;text-align:center;border:2px solid #000;padding:8px;margin-bottom:0;text-transform:uppercase;}
+#pdfRenderRoot .letterhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+#pdfRenderRoot .letterhead img{height:34px;}
+#pdfRenderRoot .letterhead .lh-right{font-size:10px;text-align:right;color:#333;}
+#pdfRenderRoot table.hdr{width:100%;border-collapse:collapse;margin-bottom:10px;}
+#pdfRenderRoot table.hdr td{border:1px solid #000;padding:5px 7px;font-size:11px;}
+#pdfRenderRoot table.hdr td.lbl{font-weight:700;background:#eee;width:16%;}
+#pdfRenderRoot table.data{width:100%;border-collapse:collapse;margin-bottom:10px;}
+#pdfRenderRoot table.data th,#pdfRenderRoot table.data td{border:1px solid #000;padding:4px 6px;font-size:10px;vertical-align:top;}
+#pdfRenderRoot table.data th{background:#ddd;font-weight:700;text-align:center;}
+#pdfRenderRoot table.data td.num{text-align:center;width:26px;}
+#pdfRenderRoot table.data td.center{text-align:center;}
+#pdfRenderRoot .sec-title{font-weight:800;font-size:12px;margin:12px 0 4px;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;}
+#pdfRenderRoot .tick-row{display:flex;gap:0;border:1px solid #000;margin-bottom:8px;}
+#pdfRenderRoot .tick-cell{flex:1;padding:6px 10px;border-right:1px solid #000;font-size:11px;}
+#pdfRenderRoot .tick-cell:last-child{border-right:none;}
+#pdfRenderRoot .tick-cell b{margin-right:6px;}
+#pdfRenderRoot .box{border:1px solid #000;padding:8px 10px;font-size:11px;margin-bottom:10px;min-height:28px;}
+#pdfRenderRoot .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+#pdfRenderRoot .sign-box{border:1px solid #000;padding:10px;font-size:11px;}
+#pdfRenderRoot .sign-box .sign-title{font-weight:700;text-align:center;margin-bottom:6px;}
+#pdfRenderRoot .sign-img{height:50px;border-bottom:1px solid #999;margin:4px 0;display:flex;align-items:flex-end;}
+#pdfRenderRoot .sign-img img{max-height:48px;max-width:100%;}
+#pdfRenderRoot .note{font-size:10px;font-style:italic;margin-top:10px;}
+#pdfRenderRoot .photo-strip{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap;}
+#pdfRenderRoot .photo-strip img{width:44px;height:44px;object-fit:cover;border:1px solid #999;}
+.divider-label{font-family:var(--mono);font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px;}
+.toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg-elevated-2);border:1px solid var(--border);
+  padding:10px 18px;border-radius:20px;font-size:12.5px;color:var(--text);z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  display:none;
+}
+.toast.show{display:block;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="img-modal-bg" id="imgModal" onclick="closeImgModal()"><img id="imgModalSrc" src=""></div>
+<div class="modal-bg" id="promptModalBg" onclick="if(event.target===this){this.classList.remove('open'); const b=document.getElementById('promptCancelBtn'); if(b) b.click();}"><div class="modal" id="promptModal" style="max-width:420px;"></div></div>
+<div id="pdfBusyOverlay" style="position:fixed;inset:0;background:rgba(4,8,12,0.75);display:none;align-items:center;justify-content:center;z-index:500;color:#fff;font-family:'Inter',sans-serif;font-size:14px;flex-direction:column;gap:12px;">
+  <div style="width:34px;height:34px;border:3px solid rgba(255,255,255,0.25);border-top-color:#ff7a29;border-radius:50%;animation:pdfspin 0.8s linear infinite;"></div>
+  <div id="pdfBusyText">Generating PDF…</div>
+</div>
+<style>@keyframes pdfspin{to{transform:rotate(360deg);}}</style>
+<div id="pdfRenderRoot" style="position:fixed;left:-10000px;top:0;width:794px;background:#fff;"></div>
+<div class="toast" id="toast"></div>
+<script>
+/* =========================================================
+   EDOTCO PAT INSPECTOR — data model
+   ========================================================= */
+const SECTIONS = [
+ {id:'A', title:'Site Layout &amp; Technical Documentation', items:[
+   {no:1, text:'Contractor has an approved site layout plan.', sev:'A'},
+   {no:2, text:'Site laid out as per approved plan.', sev:'A'},
+   {no:3, text:'Site is constructed on leased area.', sev:'B'},
+   {no:4, text:'Levels (EGL &amp; FGL) as mentioned in the drawings match actual site and allow proper drainage of water.', sev:'A'},
+   {no:5, text:'DG, solar and equipment slab/equipment frame is as per approved layout.', sev:'A'},
+   {no:6, text:'No blocked access on site: cable tray, access stair and climbing ladder installed as per approved site layout drawing.', sev:'B'},
+   {no:7, text:'All technical documents presented (as-built drawing, BoQ, tower vertical alignment, torque test result for bolts, concrete/steel testing certificates, grounding test, etc.)?', sev:'A'},
+ ]},
+ {id:'B', title:'General Civil Works', items:[
+   {no:1, text:'Outdoor equipment and DG/solar slab dimensions are as per drawings and properly sloped for drainage.', sev:'A'},
+   {no:2, text:'Access stair for outdoor equipment and DG/solar slab is as per drawing and properly sloped.', sev:'B'},
+   {no:3, text:'Record outdoor equipment and DG/solar slab dimensions (L, W) and concrete strength fc.', sev:'B'},
+   {no:4, text:'Outdoor cable tray is assembled properly and as per specification.', sev:'B'},
+   {no:5, text:'Vertical supports for outdoor cable tray constructed at appropriate distance and properly inserted in concrete base.', sev:'B'},
+   {no:6, text:'Crushed stone layer as per specification, 10cm thickness.', sev:'B'},
+   {no:7, text:'Earthing pits are built as per approved drawings.', sev:'B'},
+   {no:8, text:'Geotextile GP250 / 2-ply plastic layered properly as per approved drawings.', sev:'B'},
+   {no:9, text:'No visible grass or vegetation grown inside area — site must be cleaned.', sev:'B'},
+ ]},
+ {id:'C', title:'Tower Erection', items:[
+   {no:1, text:'Correct tower drawings available at acceptance, inclusive of tower bolt torque specifications.', sev:'A'},
+   {no:2, text:'Spot check at least 10 bolts torque. Test fails if more than 3 bolts fail.', sev:'A'},
+   {no:3, text:'Bolt accessibility checked for maintenance purposes.', sev:'A'},
+   {no:4, text:'Minimum thread protruding from any bolt after nuts tightened is 2 full threads.', sev:'A'},
+   {no:5, text:'Galvanised bolts fully coated on head/nuts; protruding threads painted with cold galvanising paint if damaged.', sev:'A'},
+   {no:6, text:'No twist or bend visible. If visible, measure — within specification of &plusmn;1 degree?', sev:'A'},
+   {no:7, text:'Galvanising inspected for damage. Chips/cracks treated with cold galvanising or zinc spray.', sev:'B'},
+   {no:8, text:'Access ladder straight, secure and extends to highest point of tower as per drawing (if applicable).', sev:'B'},
+   {no:9, text:'Fall arrestor cable installed as per specification.', sev:'A'},
+   {no:10, text:'Foundations have smooth finish and raincoat painting.', sev:'B'},
+   {no:11, text:'Tower grouting below flanges done to specification.', sev:'A'},
+   {no:12, text:'Lighting spike fixed securely on top of tower with copper rod, connected to BTS earth bar with 70sqmm aluminum cable.', sev:'A'},
+   {no:13, text:'GSM antenna dual mounts and MW single mount installed per BOQ — record GSM &amp; MW counts.', sev:'B'},
+   {no:14, text:'Aviation lights installed properly at required height.', sev:'A'},
+   {no:15, text:'Tower base (footing &amp; column) in good condition — no visible cracking, damage or movement. Record concrete strength fc.', sev:'A'},
+   {no:16, text:'No visible settlement of soil filling in site area and around tower/equipment foundation.', sev:'A'},
+   {no:17, text:'No visible standing water in site area or along security fence.', sev:'A'},
+ ]},
+ {id:'D', title:'Fence &amp; Gate (Greenfield Sites)', items:[
+   {no:1, text:'Fence post, intermediate posts and pole are vertical (plumb).', sev:'A'},
+   {no:2, text:'Foundation for fence and gate constructed properly.', sev:'A'},
+   {no:3, text:'Gate locking mechanism operational, lock of good quality.', sev:'A'},
+   {no:4, text:'Gate is operational and built as per drawings.', sev:'A'},
+   {no:5, text:'Barbed wire installed, tension as per drawings.', sev:'B'},
+   {no:6, text:'Wire mesh for fence and gate panel installed as per specification.', sev:'B'},
+   {no:7, text:'No visible settlement/sliding for fence foundation/beam; standing safely, no visible cracking or damage.', sev:'B'},
+   {no:8, text:'Site banner and EHS signboard with proper information correctly installed at suitable location.', sev:'B'},
+ ]},
+ {id:'E', title:'Earthing &amp; Lightning Installation', items:[
+   {no:1, text:'All exposed earth connections covered with Denzo paste.', sev:'B'},
+   {no:2, text:'Number of earth pits (min. 2 in GF) properly placed as per design.', sev:'B'},
+   {no:3, text:'Site earthing system completed to specification of less than 5 Ohms (record test result R).', sev:'A'},
+   {no:4, text:'All tower legs correctly bonded to ground ring and adequately tightened.', sev:'A'},
+   {no:5, text:'Fence and gate connected to site earthing system.', sev:'B'},
+   {no:6, text:'All earth/bus bars installed in correct locations on tower &amp; near sun shelter.', sev:'A'},
+   {no:7, text:'Earthing pits covered with proper cover for watering and measuring purposes.', sev:'B'},
+   {no:8, text:'All metallic parts securely bonded; no corrosion, no missing or damaged components.', sev:'B'},
+ ]},
+ {id:'F', title:'Electrical Installation', items:[
+   {no:1, text:'External DB with accessories as per Edotco &amp; USO technical specification (same as approved sample).', sev:'A'},
+   {no:2, text:'DB sealed correctly with water proofing in accordance to specification.', sev:'B'},
+   {no:3, text:'Positioning of COS in DB as per Edotco &amp; USO specification.', sev:'B'},
+   {no:4, text:'All burrs and wire off-cuts removed (especially behind duct covers and inside DB boards).', sev:'B'},
+   {no:5, text:'All terminations tight and secure.', sev:'B'},
+   {no:6, text:'Positioning of plugs/switches and lights as per drawing and shelter layout.', sev:'B'},
+   {no:7, text:'Plugs, switches and lights are operational.', sev:'B'},
+   {no:8, text:'Top Aircraft Warning Lamp (AWL) fitted securely, operational automatically — record count.', sev:'B'},
+   {no:9, text:'Midway Aircraft Warning Lamp (AWL) fitted securely and operational, if applicable — record count.', sev:'B'},
+   {no:10, text:'AC feed cable size as per design and routed properly.', sev:'A'},
+   {no:11, text:'Record the length of the power cable.', sev:'B'},
+   {no:13, text:'Main DB ground terminal connects to site earthing system.', sev:'B'},
+   {no:14, text:'Plan of power route and electrical COC available on site.', sev:'B'},
+   {no:15, text:'Single / three phase commercial power available, if applicable — record power meter # and reading.', sev:'A'},
+   {no:16, text:'Checking of all AC breakers tripping.', sev:'B'},
+   {no:17, text:'All outdoor premises (sun shelter) have lights installed &amp; working in proper locations.', sev:'B'},
+ ]},
+ {id:'G', title:'Container / Equipment Shelter (ODU)', items:[
+   {no:1, text:'Sun shade installed according to approved design.', sev:'A'},
+   {no:2, text:'Sun shelter stub columns orientation according to site drawing.', sev:'A'},
+   {no:3, text:'Sun shelter column dimensions as per specification — record dimensions.', sev:'A'},
+   {no:4, text:'All sun shelter nuts &amp; bolts assembly properly tightened with spring washers and plain washers.', sev:'A'},
+   {no:5, text:'All parts of sunshade properly painted and finished (if not, another coat of cold galvanising paint required).', sev:'A'},
+   {no:6, text:'Physical chips and cracks treated with cold galvanising or zinc spray.', sev:'B'},
+   {no:7, text:'Record sun shelter dimensions (L, W).', sev:'B'},
+ ]},
+ {id:'H', title:'Roads, Site Access &amp; Restoration', items:[
+   {no:1, text:'Existing roads used as far as possible.', sev:'B'},
+   {no:2, text:'Site access road aligned with the site design.', sev:'B'},
+   {no:3, text:'Reinstatement of soil outside fence area properly completed.', sev:'B'},
+   {no:4, text:'Construction area clear of all rubble, installation material, excavation soil, etc.', sev:'B'},
+   {no:5, text:'Trenches properly filled and compacted.', sev:'B'},
+ ]},
+ {id:'I', title:'Additional Work', items:[
+   {no:1, text:'Access road made 3m wide with 100mm gravel compaction.', sev:'B'},
+   {no:2, text:'Manual transportation for construction and tower materials.', sev:'B'},
+   {no:3, text:'4WD transportation for construction and tower materials.', sev:'B'},
+   {no:4, text:'Boat/ship transportation for construction and tower materials.', sev:'B'},
+   {no:5, text:'Rock excavation for tower foundation by manpower or machinery.', sev:'B'},
+   {no:6, text:'Rock blasting for tower foundation.', sev:'B'},
+   {no:7, text:'Rubble retaining wall for site compound with slope protection.', sev:'B'},
+   {no:8, text:'RC retaining wall for site compound with slope protection.', sev:'B'},
+   {no:9, text:'Supply and install transformer to get EDC power to site.', sev:'B'},
+   {no:10, text:'Tower painting as per ICAO and CCAR requirements.', sev:'B'},
+   {no:11, text:'Others.', sev:'B'},
+ ]},
+];
+const TOTAL_ITEMS = SECTIONS.reduce((a,s)=>a+s.items.length,0);
+
+const VERT_HEIGHTS = [0,2.5,5,7.5,10,12.5,15,17.5,20,22.5,25,27.5,30,32.5,35,37.5,40,42.5,45,47.5,50,52.5,55,57.5,60];
+const TORQUE_ROWS = ['0.0-5.0','5.0-10.0','10.0-15.0','15.0-20.0','20.0-25.0','25.0-30.0','30.0-35.0','35.0-40.0','40.0-45.0','45.0-50.0','50.0-55.0','55.0-60.0','Antenna Mounts','Platform','Ladder'];
+const TORQUE_BOLTS = ['M12','M16','M20','M24','M30'];
+const TORQUE_MIN = [{b:'M12',nm:90,kgf:9},{b:'M14',nm:115.8,kgf:11.5},{b:'M16',nm:200,kgf:20},{b:'M20',nm:400,kgf:40},{b:'M24',nm:600,kgf:60},{b:'M30',nm:1400,kgf:140}];
+const EARTH_ITEMS = [
+  {key:'overall', label:'All metallic parts securely connected to earthing system properly with earth resistance \u2264 5 \u03a9.'},
+  {key:'R1', label:'Lightning earthing pit (R1)'},
+  {key:'R2', label:'Equipment earthing pit (R2)'},
+  {key:'R3', label:'Equipment bus bar 1 (R3)'},
+  {key:'R4', label:'Equipment bus bar 2 (R4)'},
+  {key:'R5', label:'Equipment bus bar 3 (R5)'},
+  {key:'R6', label:'Tower bus bar (R6)'},
+  {key:'R7', label:'Tower legs (R7)'},
+  {key:'R8', label:'Sun shelter (R8)'},
+  {key:'R9', label:'Cable tray and support (R9)'},
+  {key:'R10', label:'Fence: reading value (R10)'},
+  {key:'R11', label:'Gate: reading value (R11)'},
+];
+const ADMIN_PASSWORD = "Edotco@PAT2026";
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let VIEW = 'home';              // home | field-list | editor | admin-login | admin
+let ADMIN_AUTHED = false;
+let CURRENT_RECORD = null;      // record being edited
+let CURRENT_TAB = 'header';     // header|checklist|tests|snags|signoff
+let CURRENT_TEST_TAB = 'vert';
+let OPEN_SECTIONS = {A:true};
+let SITE_INDEX = [];            // [{siteID, siteName, status, updatedAt, completion}]
+let SAVE_TIMER = null;
+let ADMIN_TAB = 'overview';
+let ADMIN_FILTER = {status:'all', q:''};
+let ADMIN_DETAIL_SITE = null;
+let ADMIN_DETAIL_RECORD = null;
+let SNAG_FILTER = {status:'all', sev:'all'};
+
+function blankHeader(){
+  return {projectName:'', siteID:'', siteName:'', siteType:'Greenfield', buildType:'New Site Build',
+    towerType:'', towerHeight:'', manufacturer:'', installerRigger:'', coordinates:'', cityProvince:'',
+    rfaiDate:'', patDate:'', scopeOfWork:'', contractorCompany:''};
+}
+function blankItemState(){ return {contractor:'', edotco:'', remark:'', photos:[]}; }
+function blankChecklist(){
+  const c = {};
+  SECTIONS.forEach(s=>{ c[s.id] = {}; s.items.forEach(it=>{ c[s.id][it.no] = blankItemState(); }); });
+  return c;
+}
+function blankVert(){
+  return { rows: VERT_HEIGHTS.map(()=>({aL:'',aR:'',bL:'',bR:''})), remark:'' };
+}
+function blankTorque(){
+  const rows = {};
+  TORQUE_ROWS.forEach(r=>{ rows[r] = {}; TORQUE_BOLTS.forEach(b=>{ rows[r][b] = ''; }); });
+  return { rows, remark:'' };
+}
+function blankHammer(){
+  return { rows:[
+      {label:'Tower Column', vals:Array(12).fill(''), strength:''},
+      {label:'Equipment/DG/Solar Beam/Column', vals:Array(12).fill(''), strength:''},
+      {label:'Equipment/DG/Solar Slab', vals:Array(12).fill(''), strength:''},
+    ], remarks:['','',''] };
+}
+function blankEarthing(){
+  const rows = {};
+  EARTH_ITEMS.forEach(e=>{ rows[e.key] = {val:'', ok:'', remark:''}; });
+  return rows;
+}
+function blankRecord(){
+  return {
+    header: blankHeader(),
+    checklist: blankChecklist(),
+    tests: { vert: blankVert(), torque: blankTorque(), hammer: blankHammer(), earthing: blankEarthing() },
+    manualSnags: [],
+    snagStatus: {},
+    signoff: { status:'', comments:'', contractorName:'', contractorSig:'', contractorDate:'', edotcoName:'', edotcoSig:'', edotcoDate:'' },
+    createdAt: Date.now(), updatedAt: Date.now(),
+  };
+}
+
+function keyFor(siteID){ return 'pat_site_' + String(siteID).trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'_'); }
+const MAX_PAYLOAD_BYTES = 4.5 * 1024 * 1024; // stay under the platform's 5MB/key ceiling
+
+function byteLen(str){ return new Blob([str]).size; }
+
+async function withRetry(fn, retries){
+  retries = retries==null ? 2 : retries;
+  let lastErr;
+  for(let attempt=0; attempt<=retries; attempt++){
+    try{ return await fn(); }
+    catch(e){
+      lastErr = e;
+      const msg = (e && e.message) || '';
+      // don't retry on things a retry can't fix (payload too big, bad input)
+      if(/too large|size|invalid/i.test(msg)) break;
+      if(attempt < retries) await new Promise(r=>setTimeout(r, 500 * (attempt+1)));
+    }
+  }
+  throw lastErr;
+}
+
+/* ---------------------------------------------------------------------
+   Storage backend shim.
+   Inside Claude.ai, window.storage is provided natively. Outside Claude
+   (e.g. this app deployed on its own domain), no such thing exists — so
+   if it's missing, we provide our own compatible implementation backed
+   by a small REST API (see /functions/api/kv in the deploy package).
+   Every other part of the app calls window.storage the same way either
+   way and never needs to know which backend is actually in use.
+--------------------------------------------------------------------- */
+if (typeof window.storage === 'undefined') {
+  window.storage = {
+    async get(key, shared){
+      const res = await fetch('/api/kv/' + encodeURIComponent(key));
+      if(res.status === 404) throw new Error('not found');
+      if(!res.ok) throw new Error('Storage get failed: ' + res.status);
+      const data = await res.json();
+      return { key, value: data.value, shared };
+    },
+    async set(key, value, shared){
+      const res = await fetch('/api/kv/' + encodeURIComponent(key), {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ value }),
+      });
+      if(!res.ok) throw new Error('Storage set failed: ' + res.status);
+      return { key, value, shared };
+    },
+    async delete(key, shared){
+      const res = await fetch('/api/kv/' + encodeURIComponent(key), { method: 'DELETE' });
+      if(!res.ok) throw new Error('Storage delete failed: ' + res.status);
+      return { key, deleted: true, shared };
+    },
+    async list(prefix, shared){
+      const res = await fetch('/api/kv-list?prefix=' + encodeURIComponent(prefix||''));
+      if(!res.ok) throw new Error('Storage list failed: ' + res.status);
+      const data = await res.json();
+      return { keys: data.keys||[], prefix, shared };
+    },
+  };
+}
+
+async function loadIndex(){
+  try{
+    const res = await withRetry(()=>window.storage.get('pat_index', true));
+    SITE_INDEX = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ SITE_INDEX = []; }
+  return SITE_INDEX;
+}
+async function saveIndex(){
+  try{ await withRetry(()=>window.storage.set('pat_index', JSON.stringify(SITE_INDEX), true)); }
+  catch(e){ console.error('index save failed', e); }
+}
+async function loadSite(siteID){
+  try{
+    const res = await withRetry(()=>window.storage.get(keyFor(siteID), true));
+    return res && res.value ? JSON.parse(res.value) : null;
+  }catch(e){ return null; }
+}
+
+let SAVE_IN_FLIGHT_PROMISE = null;
+async function saveSite(record, silent){
+  // single-flight: if a save is already running, wait for it, then re-run to
+  // make sure whatever changed while we waited still gets persisted.
+  if(SAVE_IN_FLIGHT_PROMISE){
+    await SAVE_IN_FLIGHT_PROMISE.catch(()=>{});
+    return saveSite(record, silent);
+  }
+  SAVE_IN_FLIGHT_PROMISE = doSaveSite(record, silent);
+  try{
+    return await SAVE_IN_FLIGHT_PROMISE;
+  }finally{
+    SAVE_IN_FLIGHT_PROMISE = null;
+  }
+}
+async function doSaveSite(record, silent){
+  record.updatedAt = Date.now();
+  try{
+    const payload = JSON.stringify(record);
+    if(byteLen(payload) > MAX_PAYLOAD_BYTES){
+      setSaveIndicator('Save failed — too many photos');
+      showToast('This inspection is too large to save — remove a photo or two and try again');
+      return false;
+    }
+    const r = await withRetry(()=>window.storage.set(keyFor(record.header.siteID), payload, true));
+    if(!r) throw new Error('no result from storage');
+    const stats = computeStats(record);
+    const idx = SITE_INDEX.findIndex(s=>s.siteID === record.header.siteID);
+    const entry = {
+      siteID: record.header.siteID, siteName: record.header.siteName,
+      status: record.signoff.status || 'Draft', updatedAt: record.updatedAt,
+      completion: stats.completionPct, fails: stats.fails, openSnags: stats.openSnags,
+      sevAOpen: stats.sevAOpen, contractorCompany: record.header.contractorCompany,
+    };
+    if(idx>=0) SITE_INDEX[idx] = entry; else SITE_INDEX.push(entry);
+    await saveIndex();
+    if(!silent) showToast('Inspection saved');
+    setSaveIndicator('Saved just now');
+    return true;
+  }catch(e){
+    console.error(e);
+    if(!silent) showToast('Save failed — connection hiccup, will retry shortly');
+    setSaveIndicator('Save failed — will retry');
+    clearTimeout(SAVE_TIMER);
+    SAVE_TIMER = setTimeout(()=>{ if(CURRENT_RECORD) saveSite(CURRENT_RECORD, true); }, 4000);
+    return false;
+  }
+}
+function setSaveIndicator(text){
+  const el = document.getElementById('saveIndicator');
+  if(el) el.textContent = text;
+}
+function scheduleAutosave(){
+  setSaveIndicator('Saving…');
+  clearTimeout(SAVE_TIMER);
+  SAVE_TIMER = setTimeout(()=>{ if(CURRENT_RECORD) saveSite(CURRENT_RECORD, true); }, 1300);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function openImgModal(src){
+  document.getElementById('imgModalSrc').src = src;
+  document.getElementById('imgModal').classList.add('open');
+}
+function closeImgModal(){ document.getElementById('imgModal').classList.remove('open'); }
+
+/* ---- in-app prompt/confirm (native dialogs are blocked inside the artifact sandbox) ---- */
+function showPrompt(opts){
+  const fields = opts.fields || [];
+  return new Promise(resolve=>{
+    const bg = document.getElementById('promptModalBg');
+    const modal = document.getElementById('promptModal');
+    modal.innerHTML = `
+      <div class="modal-head"><div style="flex:1;"><h2 style="margin:0;font-size:16.5px;">${opts.title||''}</h2></div></div>
+      <div class="modal-body">
+        ${opts.message?`<div style="color:var(--text-dim);font-size:13px;margin-bottom:14px;line-height:1.5;">${opts.message}</div>`:''}
+        ${fields.map((f,i)=>`
+          <div class="f-field" style="margin-bottom:12px;">
+            <label>${f.label}</label>
+            ${f.type==='select'
+              ? `<select id="pf-${i}">${f.options.map(o=>`<option value="${o}" ${o===f.value?'selected':''}>${o}</option>`).join('')}</select>`
+              : `<input id="pf-${i}" type="text" placeholder="${f.placeholder||''}" value="${(f.value||'').replace(/"/g,'&quot;')}">`}
+          </div>`).join('')}
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+          <button class="btn btn-ghost" id="promptCancelBtn">Cancel</button>
+          <button class="btn btn-primary" id="promptOkBtn">${opts.okLabel||'OK'}</button>
+        </div>
+      </div>`;
+    bg.classList.add('open');
+    const finish = result =>{ bg.classList.remove('open'); resolve(result); };
+    document.getElementById('promptCancelBtn').onclick = ()=>finish(null);
+    document.getElementById('promptOkBtn').onclick = ()=>{
+      const vals = fields.map((f,i)=>document.getElementById('pf-'+i).value);
+      finish(vals);
+    };
+    const first = document.getElementById('pf-0');
+    if(first){
+      first.focus();
+      first.onkeydown = e =>{ if(e.key==='Enter') document.getElementById('promptOkBtn').click(); };
+    }
+  });
+}
+function showConfirm(message, okLabel){
+  return showPrompt({title:'Confirm', message, fields:[], okLabel:okLabel||'Confirm'}).then(v=>v!==null);
+}
+
+function getPath(obj, path){
+  return path.split('.').reduce((o,k)=> (o==null?undefined:o[k]), obj);
+}
+function setPath(obj, path, value){
+  const parts = path.split('.');
+  let cur = obj;
+  for(let i=0;i<parts.length-1;i++){ cur = cur[parts[i]]; }
+  cur[parts[parts.length-1]] = value;
+}
+
+/* ---- image compression ---- */
+function compressImage(file, maxW){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e =>{
+      const img = new Image();
+      img.onload = ()=>{
+        const scale = Math.min(1, maxW / img.width);
+        const w = Math.max(1, Math.round(img.width*scale));
+        const h = Math.max(1, Math.round(img.height*scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', 0.55));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---- stats / snags ---- */
+function computeStats(record){
+  let done=0, pass=0, fail=0, na=0, sevAOpen=0;
+  const autoSnags = [];
+  SECTIONS.forEach(sec=>{
+    sec.items.forEach(it=>{
+      const st = record.checklist[sec.id][it.no];
+      if(st.edotco){ done++; }
+      if(st.edotco==='Pass') pass++;
+      if(st.edotco==='N/A') na++;
+      if(st.edotco==='Fail'){
+        fail++;
+        const sid = 'auto-'+sec.id+'-'+it.no;
+        const status = (record.snagStatus[sid] && record.snagStatus[sid].status) || 'Open';
+        if(status==='Open' && it.sev==='A') sevAOpen++;
+        autoSnags.push({id:sid, section:sec.id, itemNo:it.no, description:it.text, severity:it.sev, status, source:'auto'});
+      }
+    });
+  });
+  (record.manualSnags||[]).forEach(sn=>{
+    if(sn.status==='Open' && sn.severity==='A') sevAOpen++;
+  });
+  const openSnags = autoSnags.filter(s=>s.status==='Open').length + (record.manualSnags||[]).filter(s=>s.status==='Open').length;
+  return {
+    total: TOTAL_ITEMS, done, pass, fail, na,
+    completionPct: Math.round((done/TOTAL_ITEMS)*100),
+    autoSnags, openSnags, sevAOpen,
+    totalSnags: autoSnags.length + (record.manualSnags||[]).length,
+  };
+}
+function allSnags(record){
+  const stats = computeStats(record);
+  const manual = (record.manualSnags||[]).map(s=>({...s, source:'manual'}));
+  return stats.autoSnags.concat(manual);
+}
+
+/* =========================================================
+   ICONS (inline svg, currentColor)
+   ========================================================= */
+const ICO = {
+  tower:`<svg class="brand-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2 L26 30 L21 30 L16 12 L11 30 L6 30 Z" fill="#ff7a29"/><path d="M9 22 L23 22 M10.5 17 L21.5 17 M12 12 L20 12" stroke="#0d141c" stroke-width="1.1"/><circle cx="16" cy="4" r="1.6" fill="#ff7a29"/></svg>`,
+  chev:`<svg class="chev icon" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  camera:`<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13.5" r="3.4" stroke="currentColor" stroke-width="1.8"/></svg>`,
+  upload:`<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  lock:`<svg class="lock" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.8"/></svg>`,
+  empty:`<svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  back:`<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  desktop:`<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  mobile:`<svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M11 18.3h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  xls:`<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.6"/><path d="M9 12l2.5 5M11.5 12L9 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M14 12v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  print:`<svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M6 9V3h12v6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="4" y="9" width="16" height="8" rx="1.2" stroke="currentColor" stroke-width="1.6"/><path d="M6 14h12v7H6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  sun:`<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.6M12 18.9v2.6M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12h2.6M18.9 12h2.6M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+  moon:`<svg viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+};
+
+const LOGO_DATA_URI = "data:image/png;base64,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";
+
+let VIEWPORT_MODE = 'desktop';
+function setViewportMode(mode){
+  VIEWPORT_MODE = mode;
+  document.body.classList.toggle('force-mobile', mode==='mobile');
+  document.querySelectorAll('.vp-toggle button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.mode===mode);
+  });
+}
+function vpToggleHTML(){
+  return `<div class="vp-toggle">
+    <button data-mode="desktop" class="${VIEWPORT_MODE==='desktop'?'active':''}" onclick="setViewportMode('desktop')">${ICO.desktop}Desktop</button>
+    <button data-mode="mobile" class="${VIEWPORT_MODE==='mobile'?'active':''}" onclick="setViewportMode('mobile')">${ICO.mobile}Mobile</button>
+  </div>`;
+}
+
+let THEME_MODE = 'dark';
+function setThemeMode(mode){
+  THEME_MODE = mode;
+  document.body.setAttribute('data-theme', mode);
+  document.querySelectorAll('.theme-toggle button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.theme===mode);
+  });
+}
+function themeToggleHTML(){
+  return `<div class="theme-toggle">
+    <button data-theme="dark" title="Dark mode" class="${THEME_MODE==='dark'?'active':''}" onclick="setThemeMode('dark')">${ICO.moon}</button>
+    <button data-theme="light" title="Light mode" class="${THEME_MODE==='light'?'active':''}" onclick="setThemeMode('light')">${ICO.sun}</button>
+  </div>`;
+}
+
+function topbar(opts){
+  opts = opts || {};
+  return `<div class="topbar">
+    <div class="brand" onclick="goHome()">
+      <div class="brand-mark-chip"><img src="${LOGO_DATA_URI}" alt="edotco"></div>
+      <div class="brand-text"><b>PAT Inspector</b><span>Edotco Cambodia</span></div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-right">${opts.right||''}${themeToggleHTML()}${vpToggleHTML()}</div>
+  </div>`;
+}
+function goHome(){ VIEW='home'; render(); }
+
+function render(){
+  const app = document.getElementById('app');
+  if(VIEW==='home') return renderHome(app);
+  if(VIEW==='field-list') return renderFieldList(app);
+  if(VIEW==='editor') return renderEditor(app);
+  if(VIEW==='admin-login') return renderAdminLogin(app);
+  if(VIEW==='admin') return renderAdmin(app);
+}
+
+function renderHome(app){
+  app.innerHTML = `
+    ${topbar()}
+    <div class="main">
+      <div class="hero">
+        <div class="hero-eyebrow">Preliminary Acceptance Test</div>
+        <h1>Tower handover,<br><em>inspected properly.</em></h1>
+        <p>Run the full PAT checklist on site, capture photo proof against every line item, and hand executives a live dashboard the moment you save — no more paper forms and scanned snag lists.</p>
+        <div class="role-grid">
+          <div class="role-card" onclick="enterField()">
+            <div class="rc-index">01 &middot; FIELD</div>
+            <h3>Field Inspection</h3>
+            <p>Open a site, work through Sections A&ndash;I, log torque/verticality/earthing/hammer tests, attach photos, and raise snags as you go.</p>
+            <button class="btn btn-primary btn-block">Start inspecting</button>
+          </div>
+          <div class="role-card" onclick="enterAdmin()">
+            <div class="rc-index">02 &middot; EXECUTIVE</div>
+            <h3>Admin Dashboard</h3>
+            <p>Password-protected view of completion, pass/fail rates, open snag lists and priority actions across every site.</p>
+            <button class="btn btn-block">Enter dashboard</button>
+          </div>
+        </div>
+      </div>
+      <div class="foot-note">Data is stored centrally and shared between everyone using this tool — field entries appear on the dashboard instantly.</div>
+    </div>`;
+}
+function enterField(){ VIEW='field-list'; render(); loadIndex().then(()=>{ if(VIEW==='field-list') renderFieldList(document.getElementById('app')); }); }
+function enterAdmin(){ VIEW = ADMIN_AUTHED ? 'admin' : 'admin-login'; render(); if(ADMIN_AUTHED) loadIndex().then(()=>{ if(VIEW==='admin') renderAdmin(document.getElementById('app')); }); }
+
+function statusBadgeHTML(status){
+  const cls = status==='PAT Accepted' ? 'accepted' : status==='PAT Accepted with comments' ? 'comments' : status==='PAT Rejected' ? 'rejected' : 'draft';
+  const label = status && status!=='Draft' ? status.replace('PAT ','') : 'In Progress';
+  return `<span class="status-badge ${cls}">${label}</span>`;
+}
+function ringSVG(pct, color){
+  const r=15, c=2*Math.PI*r, off=c-(pct/100)*c;
+  return `<svg class="progress-ring" viewBox="0 0 36 36">
+    <circle cx="18" cy="18" r="${r}" fill="none" stroke="var(--border)" stroke-width="4"/>
+    <circle cx="18" cy="18" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 18 18)"/>
+    <text x="18" y="21" text-anchor="middle" font-size="9.5" fill="${color}" font-family="IBM Plex Mono">${pct}</text>
+  </svg>`;
+}
+
+function renderFieldList(app){
+  const rightBtn = `<button class="btn btn-ghost btn-sm" onclick="goHome()">${ICO.back} Home</button>`;
+  const items = SITE_INDEX.slice().sort((a,b)=>b.updatedAt-a.updatedAt);
+  app.innerHTML = `
+    ${topbar({right:rightBtn})}
+    <div class="main">
+      <div class="section-title" style="margin-top:6px;">
+        <h3>Field Inspections</h3><div class="line"></div>
+        <button class="btn btn-primary btn-sm" onclick="startNewInspection()">+ New Inspection</button>
+      </div>
+      ${items.length===0 ? `<div class="empty-state">${ICO.empty}<div>No inspections yet. Start your first PAT check.</div></div>` : `
+      <div class="site-list">
+        ${items.map(s=>`
+          <div class="site-item" onclick="openInspection('${s.siteID}')">
+            <div class="si-id">${s.siteID}</div>
+            <div class="si-name"><b>${s.siteName||'(unnamed site)'}</b><span>${s.contractorCompany||'&mdash;'} &middot; updated ${new Date(s.updatedAt).toLocaleDateString()}</span></div>
+            <div class="si-meta">
+              ${s.sevAOpen>0?`<span class="badge open">${s.sevAOpen} critical</span>`:''}
+              ${statusBadgeHTML(s.status)}
+              ${ringSVG(s.completion, s.completion===100?'var(--pass)':'var(--accent)')}
+            </div>
+          </div>`).join('')}
+      </div>`}
+    </div>`;
+}
+
+async function startNewInspection(){
+  const vals = await showPrompt({title:'New PAT Inspection', fields:[{label:'Site ID', placeholder:'e.g. KR0107'}], okLabel:'Create'});
+  if(!vals || !vals[0] || !vals[0].trim()) return;
+  const id = vals[0].trim();
+  const existing = SITE_INDEX.find(s=>s.siteID.toUpperCase()===id.toUpperCase());
+  if(existing){
+    const ok = await showConfirm('Site ID "'+id+'" already exists. Open the existing inspection instead?', 'Open it');
+    if(ok) openInspection(existing.siteID);
+    return;
+  }
+  CURRENT_RECORD = blankRecord();
+  CURRENT_RECORD.header.siteID = id.toUpperCase();
+  CURRENT_TAB = 'header'; OPEN_SECTIONS = {A:true};
+  VIEW = 'editor'; render();
+  await saveSite(CURRENT_RECORD, true);
+}
+async function openInspection(siteID){
+  const rec = await loadSite(siteID);
+  if(!rec){ showToast('Could not load that inspection'); return; }
+  CURRENT_RECORD = rec;
+  CURRENT_TAB = 'header'; OPEN_SECTIONS = {A:true};
+  VIEW='editor'; render();
+}
+
+/* ================= EDITOR SHELL ================= */
+function switchTab(tab){ CURRENT_TAB = tab; renderEditorBody(); }
+function renderEditor(app){
+  const rec = CURRENT_RECORD;
+  const stats = computeStats(rec);
+  const rightBtn = `<button class="btn btn-ghost btn-sm" onclick="backToList()">${ICO.back} All Inspections</button>
+    <button class="btn btn-primary btn-sm" onclick="manualSave()">Save</button>`;
+  app.innerHTML = `
+    ${topbar({right:rightBtn})}
+    <div class="main">
+      <div class="editor-topbar">
+        <div class="editor-title">
+          <span class="eid">${rec.header.siteID || 'NEW SITE'}</span>
+          <h2>${rec.header.siteName || 'Untitled site'}</h2>
+        </div>
+        ${statusBadgeHTML(rec.signoff.status)}
+        <span class="save-indicator" id="saveIndicator">Loaded</span>
+      </div>
+
+      <div class="export-row">
+        <button class="btn btn-sm" onclick="exportExcel(CURRENT_RECORD)">${ICO.xls} Export Excel</button>
+        <button class="btn btn-sm" onclick="printCertificate(CURRENT_RECORD)">${ICO.print} Download the PAT Certificate</button>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat-box"><b>${stats.completionPct}%</b><span>Checklist complete</span></div>
+        <div class="stat-box pass"><b>${stats.pass}</b><span>Passed</span></div>
+        <div class="stat-box fail"><b>${stats.fail}</b><span>Failed</span></div>
+        <div class="stat-box"><b>${stats.na}</b><span>N/A</span></div>
+        <div class="stat-box sevA"><b>${stats.sevAOpen}</b><span>Open critical (Sev A)</span></div>
+      </div>
+
+      <div class="tabbar">
+        <button class="tabbtn ${CURRENT_TAB==='header'?'active':''}" onclick="switchTab('header')">Site Details</button>
+        <button class="tabbtn ${CURRENT_TAB==='checklist'?'active':''}" onclick="switchTab('checklist')">Checklist (A&ndash;I)</button>
+        <button class="tabbtn ${CURRENT_TAB==='tests'?'active':''}" onclick="switchTab('tests')">Test Results</button>
+        <button class="tabbtn ${CURRENT_TAB==='snags'?'active':''}" onclick="switchTab('snags')">Snag List ${stats.openSnags?`<span class="badge open" style="margin-left:5px;">${stats.openSnags}</span>`:''}</button>
+        <button class="tabbtn ${CURRENT_TAB==='signoff'?'active':''}" onclick="switchTab('signoff')">Sign-off</button>
+      </div>
+
+      <div id="editorBody"></div>
+    </div>`;
+  renderEditorBody();
+}
+function backToList(){ VIEW='field-list'; render(); loadIndex().then(()=>{ if(VIEW==='field-list') renderFieldList(document.getElementById('app')); }); }
+async function manualSave(){ const ok = await saveSite(CURRENT_RECORD, false); refreshStrip(); return ok; }
+function refreshStrip(){
+  // lightweight refresh of stat strip + status badge + tab badges without full re-render
+  const rec = CURRENT_RECORD, stats = computeStats(rec);
+  const strip = document.querySelector('.stat-strip');
+  if(strip) strip.innerHTML = `
+      <div class="stat-box"><b>${stats.completionPct}%</b><span>Checklist complete</span></div>
+      <div class="stat-box pass"><b>${stats.pass}</b><span>Passed</span></div>
+      <div class="stat-box fail"><b>${stats.fail}</b><span>Failed</span></div>
+      <div class="stat-box"><b>${stats.na}</b><span>N/A</span></div>
+      <div class="stat-box sevA"><b>${stats.sevAOpen}</b><span>Open critical (Sev A)</span></div>`;
+  const badge = document.querySelector('.editor-topbar .status-badge');
+  if(badge) badge.outerHTML = statusBadgeHTML(rec.signoff.status);
+  const snagTab = document.querySelector('.tabbar .tabbtn:nth-child(4)');
+  if(snagTab) snagTab.innerHTML = `Snag List ${stats.openSnags?`<span class="badge open" style="margin-left:5px;">${stats.openSnags}</span>`:''}`;
+}
+function renderEditorBody(){
+  document.querySelectorAll('.tabbar .tabbtn').forEach((b,i)=>{
+    const tabs=['header','checklist','tests','snags','signoff'];
+    b.classList.toggle('active', tabs[i]===CURRENT_TAB);
+  });
+  const body = document.getElementById('editorBody');
+  if(CURRENT_TAB==='header') body.innerHTML = renderHeaderTab();
+  if(CURRENT_TAB==='checklist') body.innerHTML = renderChecklistTab();
+  if(CURRENT_TAB==='tests') body.innerHTML = renderTestsTab();
+  if(CURRENT_TAB==='snags') body.innerHTML = renderSnagsTab();
+  if(CURRENT_TAB==='signoff') body.innerHTML = renderSignoffTab();
+  if(CURRENT_TAB==='tests') afterTestsRender();
+  if(CURRENT_TAB==='signoff') afterSignoffRender();
+}
+
+function fieldHTML(label, path, opts){
+  opts = opts || {};
+  const val = getPath(CURRENT_RECORD, path) || '';
+  const spanCls = opts.span ? ' span'+opts.span : '';
+  if(opts.type==='select'){
+    return `<div class="f-field${spanCls}"><label>${label}</label>
+      <select data-path="${path}" onchange="onFieldInput(this)">
+        ${opts.options.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}
+      </select></div>`;
+  }
+  if(opts.type==='textarea'){
+    return `<div class="f-field${spanCls}"><label>${label}</label>
+      <textarea data-path="${path}" rows="${opts.rows||3}" oninput="onFieldInput(this)">${val}</textarea></div>`;
+  }
+  return `<div class="f-field${spanCls}"><label>${label}</label>
+    <input type="${opts.type||'text'}" data-path="${path}" value="${(''+val).replace(/"/g,'&quot;')}" oninput="onFieldInput(this)"></div>`;
+}
+function onFieldInput(el){
+  setPath(CURRENT_RECORD, el.dataset.path, el.value);
+  scheduleAutosave();
+}
+
+function renderHeaderTab(){
+  return `<div class="card" style="padding:22px;">
+    <div class="form-grid">
+      ${fieldHTML('Project Name', 'header.projectName')}
+      ${fieldHTML('Site ID', 'header.siteID')}
+      ${fieldHTML('Site Name', 'header.siteName')}
+      ${fieldHTML('Tower Type (e.g. GBT-SS-60m)', 'header.towerType')}
+      ${fieldHTML('Tower Height', 'header.towerHeight')}
+      ${fieldHTML('Manufacturer', 'header.manufacturer')}
+      ${fieldHTML('Installer / Rigger', 'header.installerRigger')}
+      ${fieldHTML('Coordinates', 'header.coordinates')}
+      ${fieldHTML('City / Province', 'header.cityProvince')}
+      ${fieldHTML('RFAI Date', 'header.rfaiDate', {type:'date'})}
+      ${fieldHTML('PAT Inspection Date', 'header.patDate', {type:'date'})}
+      ${fieldHTML('Contractor Company', 'header.contractorCompany')}
+      ${fieldHTML('Scope of Work', 'header.scopeOfWork', {type:'textarea', span:3, rows:2})}
+    </div>
+
+    <div class="divider-label">Site Category</div>
+    <div class="chip-select" id="siteTypeChips">
+      ${['Greenfield','Rooftop'].map(o=>`<div class="chip-opt ${CURRENT_RECORD.header.siteType===o?'active':''}" onclick="setChip('header.siteType','${o}','siteTypeChips')">${o}</div>`).join('')}
+    </div>
+
+    <div class="divider-label">Build Type</div>
+    <div class="chip-select" id="buildTypeChips">
+      ${['New Site Build','Shared Site','Upgrade'].map(o=>`<div class="chip-opt ${CURRENT_RECORD.header.buildType===o?'active':''}" onclick="setChip('header.buildType','${o}','buildTypeChips')">${o}</div>`).join('')}
+    </div>
+  </div>`;
+}
+function setChip(path, val, containerId){
+  setPath(CURRENT_RECORD, path, val);
+  document.querySelectorAll('#'+containerId+' .chip-opt').forEach(c=>{
+    c.classList.toggle('active', c.textContent===val);
+  });
+  scheduleAutosave();
+}
+
+/* ================= CHECKLIST TAB ================= */
+function sectionDoneCount(sec){
+  let done=0;
+  sec.items.forEach(it=>{ if(CURRENT_RECORD.checklist[sec.id][it.no].edotco) done++; });
+  return done;
+}
+function renderChecklistTab(){
+  return SECTIONS.map(sec=>{
+    const done = sectionDoneCount(sec);
+    const pct = Math.round((done/sec.items.length)*100);
+    const isOpen = !!OPEN_SECTIONS[sec.id];
+    return `<div class="section-block ${isOpen?'open':''}" id="sec-${sec.id}">
+      <div class="section-head" onclick="toggleSection('${sec.id}')">
+        <div class="sec-letter">${sec.id}</div>
+        <div class="st"><b>${sec.title}</b><span>${sec.items.length} items</span></div>
+        <div class="sec-progress"><i style="width:${pct}%"></i></div>
+        ${ICO.chev}
+      </div>
+      <div class="section-body">
+        ${sec.items.map(it=>renderItemRow(sec, it)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleSection(id){
+  OPEN_SECTIONS[id] = !OPEN_SECTIONS[id];
+  document.getElementById('sec-'+id).classList.toggle('open', OPEN_SECTIONS[id]);
+}
+function renderItemRow(sec, it){
+  const st = CURRENT_RECORD.checklist[sec.id][it.no];
+  const rid = sec.id+'_'+it.no;
+  return `<div class="item-row" id="item-${rid}">
+    <div class="item-top">
+      <div class="item-no">${it.no}.</div>
+      <div class="item-text">${it.text}</div>
+      <div class="sev-tag ${it.sev}">SEV ${it.sev}</div>
+    </div>
+    <div class="item-controls">
+      <div class="field-mini">
+        <label>Contractor Self-Check</label>
+        <div class="seg" id="seg-c-${rid}">
+          ${['Pass','Fail','N/A'].map(v=>`<button data-v="${v}" class="${st.contractor===v?'active':''}" onclick="setItemVal('${sec.id}',${it.no},'contractor','${v}')">${v}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field-mini">
+        <label>Edotco Check</label>
+        <div class="seg" id="seg-e-${rid}">
+          ${['Pass','Fail','N/A'].map(v=>`<button data-v="${v}" class="${st.edotco===v?'active':''}" onclick="setItemVal('${sec.id}',${it.no},'edotco','${v}')">${v}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field-mini" style="flex:1;">
+        <label>Remark</label>
+        <textarea class="remark-input" rows="1" placeholder="Notes, dimensions, readings…" oninput="setItemRemark('${sec.id}',${it.no},this.value)">${st.remark}</textarea>
+      </div>
+    </div>
+    <div class="photo-row" id="photos-${rid}">${photoThumbsHTML(sec.id, it.no)}</div>
+  </div>`;
+}
+function photoThumbsHTML(secId, itNo){
+  const st = CURRENT_RECORD.checklist[secId][itNo];
+  const rid = secId+'_'+itNo;
+  const thumbs = st.photos.map((p,i)=>`
+    <div class="photo-thumb"><img src="${p}" onclick="openImgModal('${p}')">
+      <button class="rm" onclick="removePhoto('${secId}',${itNo},${i})">&times;</button>
+    </div>`).join('');
+  return thumbs + `
+    <div class="photo-btns">
+      <label class="photo-add" title="Take photo">${ICO.camera}
+        <input type="file" accept="image/*" capture="environment" style="display:none" onchange="addPhoto('${secId}',${itNo},this)">
+      </label>
+      <label class="photo-add" title="Upload from device">${ICO.upload}
+        <input type="file" accept="image/*" style="display:none" onchange="addPhoto('${secId}',${itNo},this)">
+      </label>
+    </div>`;
+}
+function setItemVal(secId, itNo, who, val){
+  const st = CURRENT_RECORD.checklist[secId][itNo];
+  st[who] = (st[who]===val) ? '' : val;
+  const seg = document.getElementById('seg-'+(who==='contractor'?'c':'e')+'-'+secId+'_'+itNo);
+  seg.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.v===st[who]));
+  scheduleAutosave();
+  refreshStrip();
+}
+function setItemRemark(secId, itNo, val){
+  CURRENT_RECORD.checklist[secId][itNo].remark = val;
+  scheduleAutosave();
+}
+async function addPhoto(secId, itNo, input){
+  const file = input.files[0];
+  if(!file) return;
+  const st = CURRENT_RECORD.checklist[secId][itNo];
+  if(st.photos.length>=3){ showToast('Max 3 photos per item — remove one first'); return; }
+  try{
+    const dataUrl = await compressImage(file, 480);
+    st.photos.push(dataUrl);
+    document.getElementById('photos-'+secId+'_'+itNo).innerHTML = photoThumbsHTML(secId, itNo);
+    scheduleAutosave();
+  }catch(e){ showToast('Could not read that image'); }
+  input.value = '';
+}
+function removePhoto(secId, itNo, idx){
+  CURRENT_RECORD.checklist[secId][itNo].photos.splice(idx,1);
+  document.getElementById('photos-'+secId+'_'+itNo).innerHTML = photoThumbsHTML(secId, itNo);
+  scheduleAutosave();
+}
+
+/* ================= TESTS TAB ================= */
+function switchTestTab(t){ CURRENT_TEST_TAB=t; document.getElementById('editorBody').innerHTML = renderTestsTab(); afterTestsRender(); }
+function renderTestsTab(){
+  const subs = [['vert','Tower Verticality'],['torque','Torque Test'],['hammer','Rebound Hammer'],['earthing','Earthing Inspection']];
+  return `<div class="subtabbar">
+    ${subs.map(s=>`<button class="subtab ${CURRENT_TEST_TAB===s[0]?'active':''}" onclick="switchTestTab('${s[0]}')">${s[1]}</button>`).join('')}
+  </div>
+  <div class="card" style="padding:20px;">
+    ${CURRENT_TEST_TAB==='vert' ? renderVertTest() : ''}
+    ${CURRENT_TEST_TAB==='torque' ? renderTorqueTest() : ''}
+    ${CURRENT_TEST_TAB==='hammer' ? renderHammerTest() : ''}
+    ${CURRENT_TEST_TAB==='earthing' ? renderEarthingTest() : ''}
+  </div>`;
+}
+function afterTestsRender(){ /* placeholder for post-render hooks */ }
+
+function maxDeviationMM(){
+  const h = parseFloat(CURRENT_RECORD.header.towerHeight);
+  if(!h) return '—';
+  return Math.round((h*1000)/400) + ' mm';
+}
+function renderVertTest(){
+  const t = CURRENT_RECORD.tests.vert;
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div><b style="font-size:14px;">Tower Verticality Test Result</b><div style="color:var(--text-faint);font-size:11.5px;">Max deviation allowed (H/400): <span style="color:var(--accent);font-family:var(--mono);">${maxDeviationMM()}</span></div></div>
+    </div>
+    <div class="table-wrap"><table class="dtable">
+      <tr><th>Height (m)</th><th colspan="2">Position A (mm)</th><th colspan="2">Position B (mm)</th></tr>
+      <tr><th></th><th>L</th><th>R</th><th>L</th><th>R</th></tr>
+      ${VERT_HEIGHTS.map((h,i)=>`
+        <tr><td style="font-family:var(--mono);">${h.toFixed(2)}</td>
+        <td><input value="${t.rows[i].aL}" oninput="setVert(${i},'aL',this.value)"></td>
+        <td><input value="${t.rows[i].aR}" oninput="setVert(${i},'aR',this.value)"></td>
+        <td><input value="${t.rows[i].bL}" oninput="setVert(${i},'bL',this.value)"></td>
+        <td><input value="${t.rows[i].bR}" oninput="setVert(${i},'bR',this.value)"></td></tr>`).join('')}
+    </table></div>
+    <div class="f-field" style="margin-top:14px;"><label>Remark</label>
+      <textarea class="remark-input" rows="2" oninput="setVertRemark(this.value)">${t.remark}</textarea></div>`;
+}
+function setVert(i,k,v){ CURRENT_RECORD.tests.vert.rows[i][k]=v; scheduleAutosave(); }
+function setVertRemark(v){ CURRENT_RECORD.tests.vert.remark=v; scheduleAutosave(); }
+
+function renderTorqueTest(){
+  const t = CURRENT_RECORD.tests.torque;
+  return `
+    <b style="font-size:14px;">Torque Test Result</b>
+    <div class="table-wrap" style="margin-top:12px;"><table class="dtable">
+      <tr><th>Heights (m)</th>${TORQUE_BOLTS.map(b=>`<th>${b}</th>`).join('')}</tr>
+      ${TORQUE_ROWS.map(r=>`
+        <tr><td>${r}</td>${TORQUE_BOLTS.map(b=>`
+          <td><select class="mini-select" onchange="setTorque('${r}','${b}',this.value)">
+            <option value="" ${!t.rows[r][b]?'selected':''}>—</option>
+            <option value="Pass" ${t.rows[r][b]==='Pass'?'selected':''}>Pass</option>
+            <option value="Fail" ${t.rows[r][b]==='Fail'?'selected':''}>Fail</option>
+          </select></td>`).join('')}</tr>`).join('')}
+    </table></div>
+    <div class="divider-label">Minimum Torque Requirements (reference)</div>
+    <div class="table-wrap"><table class="dtable">
+      <tr><th>Bolt</th><th>N.m</th><th>kgf.m</th></tr>
+      ${TORQUE_MIN.map(r=>`<tr><td>${r.b}</td><td>${r.nm}</td><td>${r.kgf}</td></tr>`).join('')}
+    </table></div>
+    <div class="f-field" style="margin-top:14px;"><label>Remark</label>
+      <textarea class="remark-input" rows="2" oninput="setTorqueRemark(this.value)">${t.remark}</textarea></div>`;
+}
+function setTorque(r,b,v){ CURRENT_RECORD.tests.torque.rows[r][b]=v; scheduleAutosave(); }
+function setTorqueRemark(v){ CURRENT_RECORD.tests.torque.remark=v; scheduleAutosave(); }
+
+function renderHammerTest(){
+  const t = CURRENT_RECORD.tests.hammer;
+  return `
+    <b style="font-size:14px;">Concrete Rebound Hammer Test Result</b>
+    <div class="table-wrap" style="margin-top:12px;"><table class="dtable">
+      <tr><th>Location / Member</th>${Array.from({length:12},(_,i)=>`<th>${i+1}</th>`).join('')}<th>Avg</th><th>Est. Comp. (MPa)</th></tr>
+      ${t.rows.map((row,ri)=>{
+        const nums = row.vals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+        const avg = nums.length ? (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2) : '—';
+        return `<tr><td style="min-width:170px;">${row.label}</td>
+          ${row.vals.map((v,ci)=>`<td><input value="${v}" oninput="setHammerVal(${ri},${ci},this.value)"></td>`).join('')}
+          <td style="font-family:var(--mono);color:var(--accent);">${avg}</td>
+          <td><input value="${row.strength}" oninput="setHammerStrength(${ri},this.value)" style="width:60px;"></td></tr>`;
+      }).join('')}
+    </table></div>
+    <div class="divider-label">Remarks</div>
+    ${t.rows.map((row,ri)=>`
+      <div class="f-field" style="margin-bottom:8px;"><label>${row.label}</label>
+        <textarea class="remark-input" rows="1" oninput="setHammerRemark(${ri},this.value)">${t.remarks[ri]||''}</textarea></div>`).join('')}
+    <button class="btn btn-sm" onclick="addHammerRow()">+ Add member row</button>`;
+}
+function setHammerVal(ri,ci,v){ CURRENT_RECORD.tests.hammer.rows[ri].vals[ci]=v; scheduleAutosave(); }
+function setHammerStrength(ri,v){ CURRENT_RECORD.tests.hammer.rows[ri].strength=v; scheduleAutosave(); }
+function setHammerRemark(ri,v){ CURRENT_RECORD.tests.hammer.remarks[ri]=v; scheduleAutosave(); }
+async function addHammerRow(){
+  const vals = await showPrompt({title:'Add member row', fields:[{label:'Label', placeholder:'e.g. Pile Cap'}], okLabel:'Add'});
+  if(!vals || !vals[0] || !vals[0].trim()) return;
+  const label = vals[0].trim();
+  CURRENT_RECORD.tests.hammer.rows.push({label, vals:Array(12).fill(''), strength:''});
+  CURRENT_RECORD.tests.hammer.remarks.push('');
+  document.getElementById('editorBody').innerHTML = renderTestsTab();
+  scheduleAutosave();
+}
+
+function renderEarthingTest(){
+  const t = CURRENT_RECORD.tests.earthing;
+  return `
+    <b style="font-size:14px;">Earthing Inspection Result</b>
+    <div class="table-wrap" style="margin-top:12px;"><table class="dtable">
+      <tr><th style="min-width:260px;">Check Point</th><th>Test Value (&Omega;)</th><th>Status</th><th style="min-width:160px;">Remarks</th></tr>
+      ${EARTH_ITEMS.map(e=>`
+        <tr><td>${e.label}</td>
+        <td><input value="${t[e.key].val}" oninput="setEarth('${e.key}','val',this.value)" style="width:80px;"></td>
+        <td><select class="mini-select" onchange="setEarth('${e.key}','ok',this.value)">
+          <option value="" ${!t[e.key].ok?'selected':''}>—</option>
+          <option value="OK" ${t[e.key].ok==='OK'?'selected':''}>OK</option>
+          <option value="NOK" ${t[e.key].ok==='NOK'?'selected':''}>NOK</option>
+        </select></td>
+        <td><input value="${t[e.key].remark}" oninput="setEarth('${e.key}','remark',this.value)" style="width:100%;"></td></tr>`).join('')}
+    </table></div>`;
+}
+function setEarth(key,field,v){ CURRENT_RECORD.tests.earthing[key][field]=v; scheduleAutosave(); }
+
+/* ================= SNAGS TAB ================= */
+function renderSnagsTab(){
+  const snags = allSnags(CURRENT_RECORD);
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div style="color:var(--text-faint);font-size:12.5px;">${snags.length} total &middot; ${snags.filter(s=>s.status==='Open').length} open &middot; Fail items from the checklist are added automatically.</div>
+      <button class="btn btn-sm btn-primary" onclick="addManualSnag()">+ Add snag</button>
+    </div>
+    ${snags.length===0 ? `<div class="empty-state">${ICO.empty}<div>No snags recorded. Mark a checklist item "Fail" to raise one automatically.</div></div>` : `
+    <div class="table-wrap"><table class="dtable">
+      <tr><th>Ref</th><th style="min-width:260px;">Detail</th><th>Severity</th><th>Status</th><th>Resolved by</th><th></th></tr>
+      ${snags.map(s=>`
+        <tr>
+          <td style="font-family:var(--mono);">${s.source==='auto' ? s.section+'-'+s.itemNo : 'MANUAL'}</td>
+          <td>${s.description}</td>
+          <td><span class="sev-tag ${s.severity}">SEV ${s.severity}</span></td>
+          <td><span class="badge ${s.status==='Open'?'open':'resolved'}">${s.status}</span></td>
+          <td><select class="mini-select" onchange="setSnagResolver('${s.id}','${s.source}',this.value)">
+              <option value="" ${!s.resolvedBy?'selected':''}>—</option>
+              <option value="Contractor" ${s.resolvedBy==='Contractor'?'selected':''}>Contractor</option>
+              <option value="Edotco" ${s.resolvedBy==='Edotco'?'selected':''}>Edotco</option>
+            </select></td>
+          <td><button class="btn btn-sm ${s.status==='Open'?'':'btn-ghost'}" onclick="toggleSnagStatus('${s.id}','${s.source}')">${s.status==='Open'?'Resolve':'Reopen'}</button></td>
+        </tr>`).join('')}
+    </table></div>`}`;
+}
+function findManualSnag(id){ return CURRENT_RECORD.manualSnags.find(s=>s.id===id); }
+function toggleSnagStatus(id, source){
+  if(source==='auto'){
+    if(!CURRENT_RECORD.snagStatus[id]) CURRENT_RECORD.snagStatus[id] = {status:'Open'};
+    const cur = CURRENT_RECORD.snagStatus[id];
+    cur.status = cur.status==='Open' ? 'Resolved' : 'Open';
+    cur.date = Date.now();
+  }else{
+    const sn = findManualSnag(id);
+    sn.status = sn.status==='Open' ? 'Resolved' : 'Open';
+  }
+  scheduleAutosave();
+  document.getElementById('editorBody').innerHTML = renderSnagsTab();
+  refreshStrip();
+}
+function setSnagResolver(id, source, val){
+  if(source==='auto'){
+    if(!CURRENT_RECORD.snagStatus[id]) CURRENT_RECORD.snagStatus[id] = {status:'Open'};
+    CURRENT_RECORD.snagStatus[id].resolvedBy = val;
+  }else{
+    findManualSnag(id).resolvedBy = val;
+  }
+  scheduleAutosave();
+}
+async function addManualSnag(){
+  const vals = await showPrompt({
+    title:'Add Snag', okLabel:'Add',
+    fields:[{label:'Description', placeholder:'Describe the issue'}, {label:'Severity Level', type:'select', options:['B','A'], value:'B'}]
+  });
+  if(!vals || !vals[0] || !vals[0].trim()) return;
+  const desc = vals[0].trim();
+  const sev = vals[1]==='A' ? 'A' : 'B';
+  CURRENT_RECORD.manualSnags.push({id:'m'+Date.now(), description:desc, severity:sev, status:'Open', resolvedBy:''});
+  scheduleAutosave();
+  document.getElementById('editorBody').innerHTML = renderSnagsTab();
+  refreshStrip();
+}
+
+/* ================= SIGN-OFF TAB ================= */
+function renderSignoffTab(){
+  const s = CURRENT_RECORD.signoff;
+  const opts = ['PAT Accepted','PAT Accepted with comments','PAT Rejected'];
+  return `<div class="card" style="padding:22px;">
+    <div class="divider-label" style="margin-top:0;">Acceptance Decision</div>
+    <div class="chip-select" id="patStatusChips">
+      ${opts.map(o=>`<div class="chip-opt ${s.status===o?'active':''}" onclick="setChip('signoff.status','${o}','patStatusChips')">${o}</div>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--text-faint);margin-top:8px;">Severity Level A issues cannot be ignored — acceptance should be rejected until any Sev A item is rectified.</div>
+
+    <div class="f-field" style="margin-top:18px;"><label>Comments</label>
+      <textarea data-path="signoff.comments" rows="3" oninput="onFieldInput(this)">${s.comments}</textarea></div>
+
+    <div class="form-grid" style="margin-top:18px;">
+      ${fieldHTML('Contractor Name', 'signoff.contractorName')}
+      ${fieldHTML('Contractor Date', 'signoff.contractorDate', {type:'date'})}
+      ${fieldHTML('Edotco Name', 'signoff.edotcoName')}
+      ${fieldHTML('Edotco Date', 'signoff.edotcoDate', {type:'date'})}
+    </div>
+
+    <div class="form-grid" style="margin-top:6px;grid-template-columns:1fr 1fr;">
+      <div class="f-field">
+        <label>Contractor Signature</label>
+        <canvas class="sig-pad" id="sigContractor"></canvas>
+        <button class="btn btn-sm btn-ghost" onclick="clearSig('contractor')" style="margin-top:6px;width:fit-content;">Clear</button>
+      </div>
+      <div class="f-field">
+        <label>Edotco (Cambodia) Co., Ltd Signature</label>
+        <canvas class="sig-pad" id="sigEdotco"></canvas>
+        <button class="btn btn-sm btn-ghost" onclick="clearSig('edotco')" style="margin-top:6px;width:fit-content;">Clear</button>
+      </div>
+    </div>
+  </div>`;
+}
+let SIG_CTX = {};
+function afterSignoffRender(){
+  ['contractor','edotco'].forEach(who=>{
+    const canvas = document.getElementById('sig'+(who==='contractor'?'Contractor':'Edotco'));
+    if(!canvas) return;
+    const dpr = window.devicePixelRatio||1;
+    canvas.width = canvas.clientWidth*dpr; canvas.height = canvas.clientHeight*dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr,dpr);
+    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#eaf0f6'; ctx.lineWidth = 2; ctx.lineCap='round';
+    SIG_CTX[who] = {ctx, drawing:false, canvas};
+    const existing = getPath(CURRENT_RECORD, 'signoff.'+(who==='contractor'?'contractorSig':'edotcoSig'));
+    if(existing){ const img = new Image(); img.onload=()=>ctx.drawImage(img,0,0,canvas.clientWidth,canvas.clientHeight); img.src = existing; }
+    const pos = ev =>{
+      const r = canvas.getBoundingClientRect();
+      const p = ev.touches ? ev.touches[0] : ev;
+      return {x:p.clientX-r.left, y:p.clientY-r.top};
+    };
+    const start = ev =>{ SIG_CTX[who].drawing=true; const p=pos(ev); ctx.beginPath(); ctx.moveTo(p.x,p.y); ev.preventDefault(); };
+    const move = ev =>{ if(!SIG_CTX[who].drawing) return; const p=pos(ev); ctx.lineTo(p.x,p.y); ctx.stroke(); ev.preventDefault(); };
+    const end = ()=>{ if(!SIG_CTX[who].drawing) return; SIG_CTX[who].drawing=false;
+      setPath(CURRENT_RECORD, 'signoff.'+(who==='contractor'?'contractorSig':'edotcoSig'), canvas.toDataURL('image/png'));
+      scheduleAutosave();
+    };
+    canvas.onmousedown = start; canvas.onmousemove = move; canvas.onmouseup = end; canvas.onmouseleave = end;
+    canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
+  });
+}
+function clearSig(who){
+  const c = SIG_CTX[who];
+  if(c){ c.ctx.clearRect(0,0,c.canvas.width,c.canvas.height); }
+  setPath(CURRENT_RECORD, 'signoff.'+(who==='contractor'?'contractorSig':'edotcoSig'), '');
+  scheduleAutosave();
+}
+
+/* ================= ADMIN LOGIN ================= */
+function renderAdminLogin(app){
+  app.innerHTML = `
+    ${topbar({right:`<button class="btn btn-ghost btn-sm" onclick="goHome()">${ICO.back} Home</button>`})}
+    <div class="main">
+      <div class="login-wrap">
+        ${ICO.lock}
+        <h2>Executive Dashboard</h2>
+        <p>Enter the access code to view completion, snag lists and site status across all PAT inspections.</p>
+        <input type="password" id="adminPw" placeholder="ACCESS CODE" onkeydown="if(event.key==='Enter')tryAdminLogin()">
+        <div class="login-err" id="adminErr"></div>
+        <button class="btn btn-primary btn-block" onclick="tryAdminLogin()">Unlock Dashboard</button>
+      </div>
+    </div>`;
+  setTimeout(()=>{ const el=document.getElementById('adminPw'); if(el) el.focus(); },50);
+}
+function tryAdminLogin(){
+  const val = document.getElementById('adminPw').value;
+  if(val === ADMIN_PASSWORD){
+    ADMIN_AUTHED = true; VIEW='admin'; render();
+    loadIndex().then(()=>{ if(VIEW==='admin') renderAdmin(document.getElementById('app')); });
+  }else{
+    document.getElementById('adminErr').textContent = 'Incorrect access code.';
+  }
+}
+
+/* ================= ADMIN DASHBOARD ================= */
+function adminLogout(){ ADMIN_AUTHED=false; goHome(); }
+function switchAdminTab(t){ ADMIN_TAB=t; renderAdminBody(); }
+function renderAdmin(app){
+  const rightBtn = `<button class="btn btn-ghost btn-sm" onclick="loadIndex().then(renderAdminBody)">Refresh</button>
+    <button class="btn btn-ghost btn-sm" onclick="adminLogout()">Log out</button>`;
+  app.innerHTML = `
+    ${topbar({right:rightBtn})}
+    <div class="main wide">
+      <div class="section-title" style="margin-top:6px;">
+        <h3>Executive Dashboard</h3><div class="line"></div>
+      </div>
+      <div class="tabbar">
+        <button class="tabbtn ${ADMIN_TAB==='overview'?'active':''}" onclick="switchAdminTab('overview')">Overview</button>
+        <button class="tabbtn ${ADMIN_TAB==='sites'?'active':''}" onclick="switchAdminTab('sites')">All Sites</button>
+        <button class="tabbtn ${ADMIN_TAB==='snags'?'active':''}" onclick="switchAdminTab('snags')">Snag List</button>
+        <button class="tabbtn ${ADMIN_TAB==='actions'?'active':''}" onclick="switchAdminTab('actions')">Priority Actions</button>
+      </div>
+      <div id="adminBody"></div>
+    </div>
+    <div class="modal-bg" id="siteModalBg" onclick="if(event.target===this)closeSiteModal()"><div class="modal" id="siteModal"></div></div>`;
+  renderAdminBody();
+}
+function adminAgg(){
+  const s = SITE_INDEX;
+  const total = s.length;
+  const accepted = s.filter(x=>x.status==='PAT Accepted').length;
+  const comments = s.filter(x=>x.status==='PAT Accepted with comments').length;
+  const rejected = s.filter(x=>x.status==='PAT Rejected').length;
+  const inprog = total-accepted-comments-rejected;
+  const avgCompletion = total ? Math.round(s.reduce((a,x)=>a+x.completion,0)/total) : 0;
+  const openSnags = s.reduce((a,x)=>a+(x.openSnags||0),0);
+  const sevAOpen = s.reduce((a,x)=>a+(x.sevAOpen||0),0);
+  return {total, accepted, comments, rejected, inprog, avgCompletion, openSnags, sevAOpen};
+}
+function renderAdminBody(){
+  const el = document.getElementById('adminBody');
+  if(!el) return;
+  if(ADMIN_TAB==='overview') el.innerHTML = renderAdminOverview();
+  if(ADMIN_TAB==='sites') el.innerHTML = renderAdminSites();
+  if(ADMIN_TAB==='snags') el.innerHTML = renderAdminSnags();
+  if(ADMIN_TAB==='actions') el.innerHTML = renderAdminActions();
+}
+function renderAdminOverview(){
+  const a = adminAgg();
+  const sorted = SITE_INDEX.slice().sort((x,y)=>y.updatedAt-x.updatedAt).slice(0,6);
+  return `
+    <div class="kpi-grid">
+      <div class="kpi accent"><span>Total Sites Inspected</span><b>${a.total}</b></div>
+      <div class="kpi pass"><span>PAT Accepted</span><b>${a.accepted}</b></div>
+      <div class="kpi warn"><span>Accepted w/ Comments</span><b>${a.comments}</b></div>
+      <div class="kpi fail"><span>PAT Rejected</span><b>${a.rejected}</b></div>
+      <div class="kpi"><span>In Progress</span><b>${a.inprog}</b></div>
+      <div class="kpi accent"><span>Avg. Checklist Completion</span><b>${a.avgCompletion}%</b></div>
+      <div class="kpi fail"><span>Total Open Snags</span><b>${a.openSnags}</b></div>
+      <div class="kpi fail"><span>Open Critical (Sev A)</span><b>${a.sevAOpen}</b></div>
+    </div>
+    <div class="section-title"><h3>Recently updated</h3><div class="line"></div></div>
+    <div class="site-list">
+      ${sorted.length===0 ? `<div class="empty-state">${ICO.empty}<div>No inspections submitted yet.</div></div>` : sorted.map(s=>`
+        <div class="site-item" onclick="openSiteModal('${s.siteID}')">
+          <div class="si-id">${s.siteID}</div>
+          <div class="si-name"><b>${s.siteName||'(unnamed site)'}</b><span>${s.contractorCompany||'&mdash;'} &middot; updated ${new Date(s.updatedAt).toLocaleDateString()}</span></div>
+          <div class="si-meta">
+            ${s.sevAOpen>0?`<span class="badge open">${s.sevAOpen} critical</span>`:''}
+            ${statusBadgeHTML(s.status)}
+            ${ringSVG(s.completion, s.completion===100?'var(--pass)':'var(--accent)')}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+function renderAdminSites(){
+  let items = SITE_INDEX.slice();
+  if(ADMIN_FILTER.status!=='all') items = items.filter(s=>(s.status||'Draft')===ADMIN_FILTER.status);
+  if(ADMIN_FILTER.q) items = items.filter(s=>(s.siteID+' '+s.siteName).toLowerCase().includes(ADMIN_FILTER.q.toLowerCase()));
+  items.sort((x,y)=>y.updatedAt-x.updatedAt);
+  return `
+    <div class="filter-bar">
+      <input type="text" placeholder="Search site ID or name…" value="${ADMIN_FILTER.q}" oninput="ADMIN_FILTER.q=this.value; renderAdminBody();">
+      <select onchange="ADMIN_FILTER.status=this.value; renderAdminBody();">
+        <option value="all">All statuses</option>
+        <option value="Draft">In progress</option>
+        <option value="PAT Accepted">PAT Accepted</option>
+        <option value="PAT Accepted with comments">Accepted with comments</option>
+        <option value="PAT Rejected">PAT Rejected</option>
+      </select>
+    </div>
+    <div class="table-wrap"><table class="dtable">
+      <tr><th>Site ID</th><th>Site Name</th><th>Contractor</th><th>Completion</th><th>Status</th><th>Open Snags</th><th>Critical</th><th>Updated</th><th></th></tr>
+      ${items.map(s=>`
+        <tr>
+          <td style="font-family:var(--mono);color:var(--accent);">${s.siteID}</td>
+          <td>${s.siteName||'—'}</td>
+          <td>${s.contractorCompany||'—'}</td>
+          <td>${s.completion}%</td>
+          <td>${statusBadgeHTML(s.status)}</td>
+          <td>${s.openSnags||0}</td>
+          <td>${s.sevAOpen>0?`<span class="badge open">${s.sevAOpen}</span>`:'0'}</td>
+          <td style="color:var(--text-faint);">${new Date(s.updatedAt).toLocaleDateString()}</td>
+          <td><button class="btn btn-sm" onclick="openSiteModal('${s.siteID}')">View</button></td>
+        </tr>`).join('')}
+    </table></div>
+    ${items.length===0?`<div class="empty-state">${ICO.empty}<div>No sites match this filter.</div></div>`:''}`;
+}
+function renderAdminSnags(){
+  return `<div id="adminSnagsInner"><div class="empty-state">${ICO.empty}<div>Loading snag list…</div></div></div>` + (function(){ loadAllSnagsForAdmin(); return ''; })();
+}
+async function loadAllSnagsForAdmin(){
+  const all = [];
+  for(const s of SITE_INDEX){
+    const rec = await loadSite(s.siteID);
+    if(!rec) continue;
+    allSnags(rec).forEach(sn=>all.push({...sn, siteID:s.siteID, siteName:s.siteName}));
+  }
+  ADMIN_ALL_SNAGS = all;
+  const el = document.getElementById('adminSnagsInner');
+  if(el) el.innerHTML = renderSnagTable(all);
+}
+let ADMIN_ALL_SNAGS = [];
+function renderSnagTable(all){
+  let items = all.slice();
+  if(SNAG_FILTER.status!=='all') items = items.filter(s=>s.status===SNAG_FILTER.status);
+  if(SNAG_FILTER.sev!=='all') items = items.filter(s=>s.severity===SNAG_FILTER.sev);
+  items.sort((a,b)=> (a.status===b.status?0:a.status==='Open'?-1:1) || (a.severity==='A'?-1:1));
+  return `
+    <div class="filter-bar">
+      <select onchange="SNAG_FILTER.status=this.value; document.getElementById('adminSnagsInner').innerHTML=renderSnagTable(ADMIN_ALL_SNAGS);">
+        <option value="all">All statuses</option><option value="Open">Open</option><option value="Resolved">Resolved</option>
+      </select>
+      <select onchange="SNAG_FILTER.sev=this.value; document.getElementById('adminSnagsInner').innerHTML=renderSnagTable(ADMIN_ALL_SNAGS);">
+        <option value="all">All severities</option><option value="A">Severity A</option><option value="B">Severity B</option>
+      </select>
+      <span style="color:var(--text-faint);font-size:12px;">${items.length} of ${all.length} shown</span>
+    </div>
+    ${items.length===0?`<div class="empty-state">${ICO.empty}<div>No snags found.</div></div>`:`
+    <div class="table-wrap"><table class="dtable">
+      <tr><th>Site</th><th style="min-width:260px;">Detail</th><th>Severity</th><th>Status</th><th>Resolved by</th><th></th></tr>
+      ${items.map(s=>`
+        <tr>
+          <td style="font-family:var(--mono);color:var(--accent);">${s.siteID}</td>
+          <td>${s.description}<div style="color:var(--text-faint);font-size:10.5px;">${s.siteName||''}</div></td>
+          <td><span class="sev-tag ${s.severity}">SEV ${s.severity}</span></td>
+          <td><span class="badge ${s.status==='Open'?'open':'resolved'}">${s.status}</span></td>
+          <td>${s.resolvedBy||'—'}</td>
+          <td><button class="btn btn-sm" onclick="openSiteModal('${s.siteID}')">Open site</button></td>
+        </tr>`).join('')}
+    </table></div>`}`;
+}
+function renderAdminActions(){
+  return `<div id="adminActionsInner"><div class="empty-state">${ICO.empty}<div>Loading priority actions…</div></div></div>` + (function(){ loadPriorityActions(); return ''; })();
+}
+async function loadPriorityActions(){
+  if(!ADMIN_ALL_SNAGS.length){
+    const all = [];
+    for(const s of SITE_INDEX){
+      const rec = await loadSite(s.siteID);
+      if(!rec) continue;
+      allSnags(rec).forEach(sn=>all.push({...sn, siteID:s.siteID, siteName:s.siteName}));
+    }
+    ADMIN_ALL_SNAGS = all;
+  }
+  const critical = ADMIN_ALL_SNAGS.filter(s=>s.status==='Open' && s.severity==='A');
+  const el = document.getElementById('adminActionsInner');
+  if(!el) return;
+  el.innerHTML = `
+    <div style="color:var(--text-faint);font-size:12.5px;margin-bottom:14px;">Open Severity&nbsp;A issues across all sites — these block PAT acceptance and need action first.</div>
+    ${critical.length===0?`<div class="empty-state">${ICO.empty}<div>No open critical issues. Nice work.</div></div>`:`
+    <div class="site-list">
+      ${critical.map(s=>`
+        <div class="site-item" onclick="openSiteModal('${s.siteID}')">
+          <div class="si-id">${s.siteID}</div>
+          <div class="si-name"><b>${s.description}</b><span>${s.siteName||''}</span></div>
+          <div class="si-meta"><span class="sev-tag A">SEV A</span><span class="badge open">Open</span></div>
+        </div>`).join('')}
+    </div>`}`;
+}
+
+/* ---- site detail modal (read-only) ---- */
+async function openSiteModal(siteID){
+  const rec = await loadSite(siteID);
+  if(!rec){ showToast('Could not load site'); return; }
+  ADMIN_DETAIL_RECORD = rec;
+  const stats = computeStats(rec);
+  const snags = allSnags(rec);
+  const failItems = [];
+  SECTIONS.forEach(sec=>sec.items.forEach(it=>{
+    const st = rec.checklist[sec.id][it.no];
+    if(st.edotco==='Fail') failItems.push({sec, it, st});
+  }));
+  document.getElementById('siteModal').innerHTML = `
+    <div class="modal-head">
+      <div style="flex:1;">
+        <span class="eid" style="color:var(--accent);font-family:var(--mono);font-size:12px;">${rec.header.siteID}</span>
+        <h2 style="margin:3px 0 0;font-size:19px;">${rec.header.siteName||'Untitled site'}</h2>
+      </div>
+      ${statusBadgeHTML(rec.signoff.status)}
+      <button class="btn btn-sm" onclick="exportExcel(ADMIN_DETAIL_RECORD)">${ICO.xls} Excel</button>
+      <button class="btn btn-sm" onclick="printCertificate(ADMIN_DETAIL_RECORD)">${ICO.print} Download Certificate</button>
+      <button class="btn btn-sm btn-ghost" onclick="closeSiteModal()">Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="stat-strip">
+        <div class="stat-box"><b>${stats.completionPct}%</b><span>Complete</span></div>
+        <div class="stat-box pass"><b>${stats.pass}</b><span>Passed</span></div>
+        <div class="stat-box fail"><b>${stats.fail}</b><span>Failed</span></div>
+        <div class="stat-box"><b>${stats.na}</b><span>N/A</span></div>
+        <div class="stat-box sevA"><b>${stats.sevAOpen}</b><span>Open critical</span></div>
+      </div>
+      <div class="form-grid" style="margin-bottom:8px;">
+        <div class="f-field"><label>Contractor</label><div>${rec.header.contractorCompany||'—'}</div></div>
+        <div class="f-field"><label>Tower Type</label><div>${rec.header.towerType||'—'}</div></div>
+        <div class="f-field"><label>Coordinates</label><div>${rec.header.coordinates||'—'}</div></div>
+        <div class="f-field"><label>PAT Date</label><div>${rec.header.patDate||'—'}</div></div>
+      </div>
+      <div class="section-title"><h3>Failed items (${failItems.length})</h3><div class="line"></div></div>
+      ${failItems.length===0?`<div style="color:var(--text-faint);font-size:12.5px;">No failed checklist items.</div>`:
+      failItems.map(f=>`
+        <div class="item-row">
+          <div class="item-top"><div class="item-no">${f.sec.id}${f.it.no}</div><div class="item-text">${f.it.text}</div><div class="sev-tag ${f.it.sev}">SEV ${f.it.sev}</div></div>
+          ${f.st.remark?`<div style="margin-top:8px;font-size:12.5px;color:var(--text-dim);">${f.st.remark}</div>`:''}
+          ${f.st.photos.length?`<div class="photo-row">${f.st.photos.map(p=>`<div class="photo-thumb"><img src="${p}" onclick="openImgModal('${p}')"></div>`).join('')}</div>`:''}
+        </div>`).join('')}
+      <div class="section-title"><h3>Snag List (${snags.length})</h3><div class="line"></div></div>
+      ${renderSnagTable(snags.map(s=>({...s, siteID:rec.header.siteID, siteName:rec.header.siteName})))}
+      <div class="section-title"><h3>Sign-off</h3><div class="line"></div></div>
+      <div style="font-size:12.5px;color:var(--text-dim);line-height:1.7;">
+        ${rec.signoff.comments? '<b>Comments:</b> '+rec.signoff.comments+'<br>' : ''}
+        Contractor: ${rec.signoff.contractorName||'—'} (${rec.signoff.contractorDate||'no date'})<br>
+        Edotco: ${rec.signoff.edotcoName||'—'} (${rec.signoff.edotcoDate||'no date'})
+      </div>
+    </div>`;
+  document.getElementById('siteModalBg').classList.add('open');
+}
+function closeSiteModal(){ document.getElementById('siteModalBg').classList.remove('open'); }
+
+/* =========================================================
+   EXPORT — Excel (SheetJS) and Print-to-PDF
+   ========================================================= */
+function esc(v){
+  return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(d){ return d ? d : '________'; }
+function blank(v){ return (v===undefined||v===null||v==='') ? '' : v; }
+function letterheadHTML(siteID){
+  return `<div class="letterhead"><img src="${LOGO_DATA_URI}" alt="edotco"><div class="lh-right">Edotco (Cambodia) Co., Ltd<br>Site ${esc(siteID)} &middot; Printed ${new Date().toLocaleDateString()}</div></div>`;
+}
+
+/* ---------------- ON-DEMAND LIBRARY LOADING ----------------
+   Export/PDF libraries are only fetched when actually needed, never on
+   page load — keeps the core app fully usable offline / from a local file. */
+const CDN_LIBS = {
+  xlsx: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+};
+const _loadedScripts = {};
+function loadScriptOnce(name){
+  if(_loadedScripts[name]) return _loadedScripts[name];
+  _loadedScripts[name] = new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = CDN_LIBS[name];
+    s.onload = ()=>resolve(true);
+    s.onerror = ()=>{ delete _loadedScripts[name]; reject(new Error('Could not load ' + name)); };
+    document.head.appendChild(s);
+  });
+  return _loadedScripts[name];
+}
+
+/* ---------------- EXCEL EXPORT ---------------- */
+async function exportExcel(record){
+  if(typeof XLSX === 'undefined'){
+    showToast('Loading Excel tools\u2026');
+    try{ await loadScriptOnce('xlsx'); }
+    catch(e){ showToast('Could not load Excel tools — check your internet connection'); return; }
+  }
+  const h = record.header;
+  const wb = XLSX.utils.book_new();
+
+  // --- Sheet 1: PAT Checklist ---
+  const rows = [];
+  rows.push(['PRELIMINARY ACCEPTANCE TEST CHECKLIST']);
+  rows.push([]);
+  rows.push(['Project Name', h.projectName, '', 'Site Type', h.siteType]);
+  rows.push(['Site Name', h.siteName, '', 'Build Type', h.buildType]);
+  rows.push(['Site ID', h.siteID, '', 'Tower Type', h.towerType]);
+  rows.push(['Tower Height', h.towerHeight, '', 'Manufacturer', h.manufacturer]);
+  rows.push(['Coordinates', h.coordinates, '', 'City/Province', h.cityProvince]);
+  rows.push(['RFAI Date', h.rfaiDate, '', 'PAT Date', h.patDate]);
+  rows.push(['Contractor Company', h.contractorCompany, '', 'Installer/Rigger', h.installerRigger]);
+  rows.push(['Scope of Work', h.scopeOfWork]);
+  rows.push([]);
+  rows.push(['PAT Status', record.signoff.status || 'Draft']);
+  rows.push(['Comments', record.signoff.comments]);
+  rows.push([]);
+  SECTIONS.forEach(sec=>{
+    rows.push([sec.id + '.  ' + sec.title.replace(/&amp;/g,'&')]);
+    rows.push(['Item No.', 'Task Description', 'Severity', 'Contractor Self-Check', 'Edotco Check', 'Remark', 'Photos']);
+    sec.items.forEach(it=>{
+      const st = record.checklist[sec.id][it.no];
+      rows.push([it.no, it.text.replace(/&amp;/g,'&').replace(/&plusmn;/g,'+/-'), it.sev, st.contractor, st.edotco, st.remark, st.photos.length]);
+    });
+    rows.push([]);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(rows);
+  ws1['!cols'] = [{wch:10},{wch:55},{wch:9},{wch:16},{wch:12},{wch:34},{wch:8}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'PAT Checklist');
+
+  // --- Sheet 2: Snag List ---
+  const snags = allSnags(record);
+  const snagRows = [
+    ['SNAG LIST'],
+    ['Site ID', h.siteID, 'TowerCo/Contractor', h.contractorCompany, 'PAT Date', h.patDate],
+    [],
+    ['Ref', 'Detail Description', 'Severity Level', 'Status', 'Resolved By'],
+  ];
+  snags.forEach(s=>{
+    snagRows.push([s.source==='auto' ? s.section+'-'+s.itemNo : 'MANUAL', s.description, s.severity, s.status, s.resolvedBy||'']);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(snagRows);
+  ws2['!cols'] = [{wch:10},{wch:60},{wch:12},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Snag List');
+
+  // --- Sheet 3: Verticality ---
+  const vRows = [
+    ['TOWER VERTICALITY TEST RESULT'],
+    ['Site ID', h.siteID, 'Site Name', h.siteName, 'Tower Type', h.towerType],
+    ['Tower Height', h.towerHeight, 'Manufacturer', h.manufacturer, 'Date', h.patDate],
+    [],
+    ['Height (m)', 'Position A - L (mm)', 'Position A - R (mm)', 'Position B - L (mm)', 'Position B - R (mm)'],
+  ];
+  VERT_HEIGHTS.forEach((hgt,i)=>{
+    const r = record.tests.vert.rows[i];
+    vRows.push([hgt, r.aL, r.aR, r.bL, r.bR]);
+  });
+  vRows.push([]); vRows.push(['Max Deviation (H/400)', maxDeviationMM()]);
+  vRows.push(['Remark', record.tests.vert.remark]);
+  const ws3 = XLSX.utils.aoa_to_sheet(vRows);
+  ws3['!cols'] = [{wch:14},{wch:18},{wch:18},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Verticality');
+
+  // --- Sheet 4: Torque ---
+  const tRows = [
+    ['TORQUE TEST RESULT'],
+    ['Site ID', h.siteID, 'Site Name', h.siteName, 'Tower Type', h.towerType],
+    ['Tower Height', h.towerHeight, 'Manufacturer', h.manufacturer, 'Date', h.patDate],
+    [],
+    ['Heights (m)', ...TORQUE_BOLTS],
+  ];
+  TORQUE_ROWS.forEach(r=>{ tRows.push([r, ...TORQUE_BOLTS.map(b=>record.tests.torque.rows[r][b]||'')]); });
+  tRows.push([]);
+  tRows.push(['Minimum Torque Requirements']);
+  tRows.push(['Bolt','N.m','kgf.m']);
+  TORQUE_MIN.forEach(m=>tRows.push([m.b, m.nm, m.kgf]));
+  tRows.push([]); tRows.push(['Remark', record.tests.torque.remark]);
+  const ws4 = XLSX.utils.aoa_to_sheet(tRows);
+  ws4['!cols'] = [{wch:16},{wch:10},{wch:10},{wch:10},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Torque');
+
+  // --- Sheet 5: Rebound Hammer ---
+  const hmRows = [
+    ['CONCRETE REBOUND HAMMER TEST RESULT'],
+    ['Site ID', h.siteID, 'Site Name', h.siteName, 'Tower Type', h.towerType],
+    ['Tower Height', h.towerHeight, 'Manufacturer', h.manufacturer, 'Date', h.patDate],
+    [],
+    ['Location/Member', ...Array.from({length:12},(_,i)=>i+1), 'Avg Rebound', 'Est. Comp. (MPa)'],
+  ];
+  record.tests.hammer.rows.forEach((row,ri)=>{
+    const nums = row.vals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+    const avg = nums.length ? (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2) : '';
+    hmRows.push([row.label, ...row.vals, avg, row.strength]);
+  });
+  hmRows.push([]);
+  record.tests.hammer.rows.forEach((row,ri)=>{ hmRows.push(['Remark - '+row.label, record.tests.hammer.remarks[ri]||'']); });
+  const ws5 = XLSX.utils.aoa_to_sheet(hmRows);
+  ws5['!cols'] = [{wch:30}, ...Array(12).fill({wch:6}), {wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws5, 'Rebound Hammer');
+
+  // --- Sheet 6: Earthing ---
+  const eRows = [
+    ['EARTHING INSPECTION RESULT'],
+    ['Site ID', h.siteID, 'Site Name', h.siteName, 'Tower Type', h.towerType],
+    ['Tower Height', h.towerHeight, 'Manufacturer', h.manufacturer, 'Date', h.patDate],
+    [],
+    ['Check Point', 'Test Value (Ohm)', 'Status', 'Remarks'],
+  ];
+  EARTH_ITEMS.forEach(e=>{
+    const t = record.tests.earthing[e.key];
+    eRows.push([e.label, t.val, t.ok, t.remark]);
+  });
+  const ws6 = XLSX.utils.aoa_to_sheet(eRows);
+  ws6['!cols'] = [{wch:55},{wch:14},{wch:10},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws6, 'Earthing');
+
+  const filename = 'PAT_' + (h.siteID||'SITE') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  showToast('Excel file downloaded');
+}
+
+/* ---------------- PDF DOWNLOAD (no pop-ups — renders off-screen and saves a real .pdf file) ---------------- */
+async function downloadPdf(bodyHTML, filename){
+  // Open the destination tab FIRST, synchronously, while the click is still
+  // "fresh" — sandboxed environments revoke download permission once we go
+  // through several seconds of async rendering below, so we reserve the tab
+  // up front and only fill it in once the PDF is actually ready.
+  const tab = window.open('', '_blank');
+
+  const overlay = document.getElementById('pdfBusyOverlay');
+  const busyText = document.getElementById('pdfBusyText');
+  overlay.style.display = 'flex';
+  busyText.textContent = 'Loading PDF tools\u2026';
+
+  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined'){
+    try{
+      await Promise.all([
+        typeof html2canvas === 'undefined' ? loadScriptOnce('html2canvas') : Promise.resolve(),
+        typeof window.jspdf === 'undefined' ? loadScriptOnce('jspdf') : Promise.resolve(),
+      ]);
+    }catch(e){
+      overlay.style.display = 'none';
+      if(tab && !tab.closed) tab.close();
+      showToast('Could not load PDF tools — check your internet connection');
+      return;
+    }
+  }
+
+  const root = document.getElementById('pdfRenderRoot');
+  busyText.textContent = 'Generating PDF\u2026';
+  root.innerHTML = bodyHTML;
+  await new Promise(r=>setTimeout(r, 60)); // let layout settle
+  const imgs = Array.from(root.querySelectorAll('img'));
+  await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res=>{ img.onload=res; img.onerror=res; })));
+
+  try{
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+    const A4W = 210, A4H = 297;
+    const pageEls = Array.from(root.querySelectorAll('.doc-page'));
+    let placedFirstPage = false;
+    for(let i=0;i<pageEls.length;i++){
+      busyText.textContent = `Rendering page ${i+1} of ${pageEls.length}\u2026`;
+      const canvas = await html2canvas(pageEls[i], { scale:2, backgroundColor:'#ffffff', useCORS:true });
+      const pxPerMM = canvas.width / A4W;
+      const pageHeightPx = Math.floor(A4H * pxPerMM);
+      let y = 0;
+      while(y < canvas.height){
+        const sliceH = Math.min(pageHeightPx, canvas.height - y);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceH;
+        const ctx = sliceCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        const imgData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+        const sliceHmm = sliceH / pxPerMM;
+        if(placedFirstPage) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, A4W, sliceHmm);
+        placedFirstPage = true;
+        y += sliceH;
+      }
+    }
+    busyText.textContent = 'Finishing up\u2026';
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    if(tab && !tab.closed){
+      // the tab is a normal, unrestricted top-level window — downloading from
+      // inside it isn't subject to the artifact's iframe sandbox at all.
+      const a = tab.document.createElement('a');
+      a.href = url; a.download = filename; a.textContent = 'Downloading ' + filename + '\u2026';
+      tab.document.title = filename;
+      tab.document.body.style.cssText = 'font-family:sans-serif;padding:24px;color:#333;';
+      tab.document.body.appendChild(a);
+      a.click();
+      showToast('PDF downloaded');
+    }else{
+      // the tab itself got blocked (rare) — fall back to a same-page download attempt
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      showToast('Please allow pop-ups for this site, then try again if the download did not start');
+    }
+    setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  }catch(e){
+    console.error(e);
+    if(tab && !tab.closed) tab.close();
+    showToast('Could not generate the PDF — please try again');
+  }finally{
+    overlay.style.display = 'none';
+    root.innerHTML = '';
+  }
+}
+function tickRow(options, value){
+  return `<div class="tick-row">${options.map(o=>`<div class="tick-cell">${o===value?'\u2611':'\u2610'} <b>${esc(o)}</b></div>`).join('')}</div>`;
+}
+function checklistTableHTML(record){
+  return SECTIONS.map(sec=>{
+    const rows = sec.items.map(it=>{
+      const st = record.checklist[sec.id][it.no];
+      const photos = st.photos.length ? `<div class="photo-strip">${st.photos.map(p=>`<img src="${p}">`).join('')}</div>` : '';
+      return `<tr>
+        <td class="num">${it.no}</td>
+        <td>${it.text}</td>
+        <td class="center">${it.sev}</td>
+        <td class="center">${esc(st.contractor)}</td>
+        <td class="center">${esc(st.edotco)}</td>
+        <td>${esc(st.remark)}${photos}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="sec-title">${sec.id}. ${sec.title}</div>
+      <table class="data">
+        <tr><th style="width:26px;">No.</th><th>Task Description</th><th style="width:40px;">Sev.</th><th style="width:70px;">Contractor</th><th style="width:60px;">Edotco</th><th style="width:170px;">Remark / Photos</th></tr>
+        ${rows}
+      </table>`;
+  }).join('');
+}
+function signBlockHTML(record){
+  return `<div class="sign-grid">
+    <div class="sign-box">
+      <div class="sign-title">Contractor Name: ${esc(record.header.contractorCompany)}</div>
+      <div>Name: ${esc(record.signoff.contractorName) || '____________________'}</div>
+      <div class="sign-img">${record.signoff.contractorSig?`<img src="${record.signoff.contractorSig}">`:''}</div>
+      <div>Signature</div>
+      <div>Date: ${fmtDate(record.signoff.contractorDate)}</div>
+    </div>
+    <div class="sign-box">
+      <div class="sign-title">Edotco (Cambodia) Co., Ltd</div>
+      <div>Name: ${esc(record.signoff.edotcoName) || '____________________'}</div>
+      <div class="sign-img">${record.signoff.edotcoSig?`<img src="${record.signoff.edotcoSig}">`:''}</div>
+      <div>Signature</div>
+      <div>Date: ${fmtDate(record.signoff.edotcoDate)}</div>
+    </div>
+  </div>`;
+}
+function certificateContentHTML(record){
+  const h = record.header;
+  const stats = computeStats(record);
+  const snags = allSnags(record);
+  const cover = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title">Preliminary Acceptance Test Checklist</div>
+    <table class="hdr">
+      <tr><td class="lbl">Project Name</td><td>${esc(h.projectName)}</td><td class="lbl">Site Type</td><td>${esc(h.siteType)}</td></tr>
+      <tr><td class="lbl">Site Name</td><td>${esc(h.siteName)}</td><td class="lbl">Build Type</td><td>${esc(h.buildType)}</td></tr>
+      <tr><td class="lbl">Site ID</td><td>${esc(h.siteID)}</td><td class="lbl">Tower Type</td><td>${esc(h.towerType)}</td></tr>
+      <tr><td class="lbl">Coordinates</td><td>${esc(h.coordinates)}</td><td class="lbl">City/Province</td><td>${esc(h.cityProvince)}</td></tr>
+      <tr><td class="lbl">RFAI Date</td><td>${fmtDate(h.rfaiDate)}</td><td class="lbl">PAT Date</td><td>${fmtDate(h.patDate)}</td></tr>
+      <tr><td class="lbl">Scope of Work</td><td colspan="3">${esc(h.scopeOfWork)}</td></tr>
+    </table>
+    <div class="sec-title" style="margin-top:16px;">Acceptance Decision</div>
+    ${tickRow(['PAT Accepted','PAT Accepted with comments','PAT Rejected'], record.signoff.status)}
+    <div class="box"><b>Comments:</b> ${esc(record.signoff.comments)}</div>
+    <div class="box"><b>Checklist summary:</b> ${stats.completionPct}% complete &middot; ${stats.pass} passed &middot; ${stats.fail} failed &middot; ${stats.na} N/A &middot; ${stats.sevAOpen} open critical (Sev A)</div>
+    ${signBlockHTML(record)}
+    <div class="note">Note: Severity Level A could not be ignored — if there is any issue, acceptance will be rejected until rectification of the remark.</div>
+  </div>`;
+  const checklistPages = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title" style="font-size:13px;">PAT Checklist — ${esc(h.siteID)}</div>
+    ${checklistTableHTML(record)}
+  </div>`;
+  const snagPage = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title" style="font-size:13px;">Snag List</div>
+    <table class="hdr">
+      <tr><td class="lbl">Site ID</td><td>${esc(h.siteID)}</td><td class="lbl">TowerCo/Contractor</td><td>${esc(h.contractorCompany)}</td></tr>
+      <tr><td class="lbl">PAT Date</td><td colspan="3">${fmtDate(h.patDate)}</td></tr>
+    </table>
+    <table class="data">
+      <tr><th style="width:60px;">Ref</th><th>Detail Description</th><th style="width:50px;">Sev.</th><th style="width:60px;">Status</th><th style="width:80px;">Resolved By</th></tr>
+      ${snags.length===0?'<tr><td colspan="5" class="center">No snags recorded</td></tr>':snags.map(s=>`
+        <tr><td class="center">${s.source==='auto'?s.section+'-'+s.itemNo:'MANUAL'}</td><td>${esc(s.description)}</td><td class="center">${s.severity}</td><td class="center">${s.status}</td><td class="center">${esc(s.resolvedBy)}</td></tr>`).join('')}
+    </table>
+    ${signBlockHTML(record)}
+  </div>`;
+  return cover + checklistPages + snagPage;
+}
+function testResultsContentHTML(record){
+  const h = record.header;
+  const vert = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title">Tower Verticality Test Result</div>
+    <table class="hdr">
+      <tr><td class="lbl">Site ID</td><td>${esc(h.siteID)}</td><td class="lbl">Site Name</td><td>${esc(h.siteName)}</td><td class="lbl">Tower Type</td><td>${esc(h.towerType)}</td></tr>
+      <tr><td class="lbl">Tower Height</td><td>${esc(h.towerHeight)}</td><td class="lbl">Manufacturer</td><td>${esc(h.manufacturer)}</td><td class="lbl">Date</td><td>${fmtDate(h.patDate)}</td></tr>
+    </table>
+    <table class="data">
+      <tr><th rowspan="2">Height (m)</th><th colspan="2">Position A (mm)</th><th colspan="2">Position B (mm)</th></tr>
+      <tr><th>L</th><th>R</th><th>L</th><th>R</th></tr>
+      ${VERT_HEIGHTS.map((hgt,i)=>{ const r=record.tests.vert.rows[i]; return `<tr><td class="center">${hgt.toFixed(2)}</td><td class="center">${esc(r.aL)}</td><td class="center">${esc(r.aR)}</td><td class="center">${esc(r.bL)}</td><td class="center">${esc(r.bR)}</td></tr>`; }).join('')}
+    </table>
+    <table class="hdr"><tr><td class="lbl">Max Deviation (H/400)</td><td>${maxDeviationMM()}</td><td class="lbl">Remark</td><td>${esc(record.tests.vert.remark)}</td></tr></table>
+    ${signBlockHTML(record)}
+  </div>`;
+  const torque = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title">Torque Test Result</div>
+    <table class="hdr">
+      <tr><td class="lbl">Site ID</td><td>${esc(h.siteID)}</td><td class="lbl">Site Name</td><td>${esc(h.siteName)}</td><td class="lbl">Tower Type</td><td>${esc(h.towerType)}</td></tr>
+      <tr><td class="lbl">Tower Height</td><td>${esc(h.towerHeight)}</td><td class="lbl">Manufacturer</td><td>${esc(h.manufacturer)}</td><td class="lbl">Date</td><td>${fmtDate(h.patDate)}</td></tr>
+    </table>
+    <table class="data">
+      <tr><th>Heights (m)</th>${TORQUE_BOLTS.map(b=>`<th>${b}</th>`).join('')}</tr>
+      ${TORQUE_ROWS.map(r=>`<tr><td>${r}</td>${TORQUE_BOLTS.map(b=>`<td class="center">${esc(record.tests.torque.rows[r][b])}</td>`).join('')}</tr>`).join('')}
+    </table>
+    <div class="sec-title">Minimum Torque Requirements</div>
+    <table class="data" style="width:60%;">
+      <tr><th>Bolt</th><th>N.m</th><th>kgf.m</th></tr>
+      ${TORQUE_MIN.map(m=>`<tr><td class="center">${m.b}</td><td class="center">${m.nm}</td><td class="center">${m.kgf}</td></tr>`).join('')}
+    </table>
+    <table class="hdr"><tr><td class="lbl">Remark</td><td>${esc(record.tests.torque.remark)}</td></tr></table>
+    ${signBlockHTML(record)}
+  </div>`;
+  const hammer = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title">Concrete Rebound Hammer Test Result</div>
+    <table class="hdr">
+      <tr><td class="lbl">Site ID</td><td>${esc(h.siteID)}</td><td class="lbl">Site Name</td><td>${esc(h.siteName)}</td><td class="lbl">Tower Type</td><td>${esc(h.towerType)}</td></tr>
+      <tr><td class="lbl">Tower Height</td><td>${esc(h.towerHeight)}</td><td class="lbl">Manufacturer</td><td>${esc(h.manufacturer)}</td><td class="lbl">Date</td><td>${fmtDate(h.patDate)}</td></tr>
+    </table>
+    <table class="data">
+      <tr><th>Location/Member</th>${Array.from({length:12},(_,i)=>`<th>${i+1}</th>`).join('')}<th>Avg</th><th>Est. Comp. (MPa)</th></tr>
+      ${record.tests.hammer.rows.map(row=>{
+        const nums = row.vals.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+        const avg = nums.length ? (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2) : '';
+        return `<tr><td>${esc(row.label)}</td>${row.vals.map(v=>`<td class="center">${esc(v)}</td>`).join('')}<td class="center">${avg}</td><td class="center">${esc(row.strength)}</td></tr>`;
+      }).join('')}
+    </table>
+    <div class="sec-title">Remarks</div>
+    ${record.tests.hammer.rows.map((row,ri)=>`<div class="box"><b>${esc(row.label)}:</b> ${esc(record.tests.hammer.remarks[ri])}</div>`).join('')}
+    ${signBlockHTML(record)}
+  </div>`;
+  const earthing = `<div class="doc-page">
+    ${letterheadHTML(h.siteID)}
+    <div class="doc-title">Earthing Inspection Result</div>
+    <table class="hdr">
+      <tr><td class="lbl">Site ID</td><td>${esc(h.siteID)}</td><td class="lbl">Site Name</td><td>${esc(h.siteName)}</td><td class="lbl">Tower Type</td><td>${esc(h.towerType)}</td></tr>
+      <tr><td class="lbl">Tower Height</td><td>${esc(h.towerHeight)}</td><td class="lbl">Manufacturer</td><td>${esc(h.manufacturer)}</td><td class="lbl">Date</td><td>${fmtDate(h.patDate)}</td></tr>
+    </table>
+    <table class="data">
+      <tr><th>Check Point</th><th style="width:70px;">Test Value (&Omega;)</th><th style="width:50px;">Status</th><th>Remarks</th></tr>
+      ${EARTH_ITEMS.map(e=>{ const t=record.tests.earthing[e.key]; return `<tr><td>${esc(e.label)}</td><td class="center">${esc(t.val)}</td><td class="center">${esc(t.ok)}</td><td>${esc(t.remark)}</td></tr>`; }).join('')}
+    </table>
+    ${signBlockHTML(record)}
+  </div>`;
+  return vert + torque + hammer + earthing;
+}
+async function printCertificate(record){
+  const h = record.header;
+  const combined = certificateContentHTML(record) + testResultsContentHTML(record);
+  return downloadPdf(combined, 'PAT_Certificate_'+(h.siteID||'SITE')+'.pdf');
+}
+
+/* ================= INIT ================= */
+try{
+  render();
+}catch(e){
+  console.error('Init render failed:', e);
+  document.getElementById('app').innerHTML =
+    '<div style="padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a1a;background:#fff;min-height:100vh;">'+
+    '<h2 style="margin:0 0 10px;">Something went wrong loading the app</h2>'+
+    '<p style="color:#666;font-size:14px;">Try reloading. If this keeps happening, tap the thumbs-down button so Anthropic can take a look.</p>'+
+    '<pre style="white-space:pre-wrap;font-size:11px;color:#a33;background:#faf0f0;padding:10px;border-radius:6px;overflow-x:auto;">'+
+    String((e && e.stack) || e).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre></div>';
+}
+window.addEventListener('error', function(e){ console.error('Uncaught error:', e.error || e.message); });
+
+</script>
+</body>
+</html>
