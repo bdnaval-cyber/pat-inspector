@@ -6,5 +6,8 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS"
-  }
+  },
+  "kv_namespaces": [
+    { "binding": "PAT_KV", "id": "a62a183602464124adf1f71578a92934" }
+  ]
 }
