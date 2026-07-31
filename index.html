@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PAT Inspector">
+<meta name="theme-color" content="#0d141c">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
 <title>Edotco &middot; PAT Inspector</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -136,6 +141,13 @@ a{color:var(--accent);}
 .theme-toggle button:last-child{border-right:none;}
 .theme-toggle button.active{background:var(--accent-soft);color:var(--accent);}
 .theme-toggle svg{width:14px;height:14px;}
+.sync-pill{
+  font-family:var(--mono);font-size:11px;font-weight:600;padding:6px 11px;border-radius:20px;
+  border:1px solid var(--border);white-space:nowrap;flex:none;cursor:default;
+}
+.sync-pill.sp-synced{color:var(--pass);border-color:rgba(51,193,122,0.35);background:var(--pass-soft);}
+.sync-pill.sp-pending{color:var(--sev-b);border-color:rgba(245,177,76,0.35);background:var(--sev-b-soft);}
+.sync-pill.sp-offline{color:var(--text-faint);background:var(--bg-elevated);}
 .brand-text{display:flex;flex-direction:column;line-height:1.1;}
 .brand-text b{font-size:14.5px;letter-spacing:0.2px;}
 .brand-text span{font-size:10.5px;color:var(--text-faint);font-family:var(--mono);letter-spacing:0.6px;text-transform:uppercase;}
@@ -621,7 +633,7 @@ const EARTH_ITEMS = [
   {key:'R10', label:'Fence: reading value (R10)'},
   {key:'R11', label:'Gate: reading value (R11)'},
 ];
-const ADMIN_PASSWORD = "Edotco2026";
+const ADMIN_PASSWORD = "Edotco@PAT2026";
 
 /* =========================================================
    STATE
@@ -705,42 +717,175 @@ async function withRetry(fn, retries){
 }
 
 /* ---------------------------------------------------------------------
-   Storage backend shim.
-   Inside Claude.ai, window.storage is provided natively. Outside Claude
-   (e.g. this app deployed on its own domain), no such thing exists — so
-   if it's missing, we provide our own compatible implementation backed
-   by a small REST API (see /functions/api/kv in the deploy package).
-   Every other part of the app calls window.storage the same way either
-   way and never needs to know which backend is actually in use.
+   Storage backend shim — offline-capable.
+   Inside Claude.ai, window.storage is provided natively (and Claude's own
+   storage isn't something we control offline behavior for). Outside Claude
+   (this app deployed on its own domain), we provide our own implementation
+   that:
+     1. Always writes to IndexedDB first, so a save can never "fail" from
+        the user's point of view even with zero connectivity.
+     2. Tries to push to the server immediately; if that fails (offline, or
+        a transient server error), the record just stays marked "pending"
+        and a background process keeps retrying.
+     3. Reconciles the site-index list (a single shared blob) by merging
+        with whatever's on the server rather than blindly overwriting, so
+        a device that was offline for a while doesn't erase sites another
+        device already synced in the meantime.
+   Every other part of the app calls window.storage the same way regardless
+   of connectivity and never needs to know any of this is happening.
 --------------------------------------------------------------------- */
 if (typeof window.storage === 'undefined') {
+  const IDB_NAME = 'pat_inspector_offline';
+  const IDB_STORE = 'kv';
+  function openIDB(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if(!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE, {keyPath:'key'});
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbGet(key){
+    const db = await openIDB();
+    return new Promise((resolve, reject)=>{
+      const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(key, value, dirty){
+    const db = await openIDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put({key, value, dirty: !!dirty, updatedAt: Date.now()});
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbDelete(key){
+    const db = await openIDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbAll(){
+    const db = await openIDB();
+    return new Promise((resolve, reject)=>{
+      const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function remoteGet(key){
+    const res = await fetch('/api/kv/' + encodeURIComponent(key));
+    if(res.status === 404) throw new Error('not found');
+    if(!res.ok) throw new Error('Storage get failed: ' + res.status);
+    return (await res.json()).value;
+  }
+  async function remoteSet(key, value){
+    const res = await fetch('/api/kv/' + encodeURIComponent(key), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({value}),
+    });
+    if(!res.ok) throw new Error('Storage set failed: ' + res.status);
+  }
+  async function remoteDelete(key){
+    const res = await fetch('/api/kv/' + encodeURIComponent(key), { method:'DELETE' });
+    if(!res.ok) throw new Error('Storage delete failed: ' + res.status);
+  }
+  async function remoteList(prefix){
+    const res = await fetch('/api/kv-list?prefix=' + encodeURIComponent(prefix||''));
+    if(!res.ok) throw new Error('Storage list failed: ' + res.status);
+    return (await res.json()).keys || [];
+  }
+
+  function mergeIndexes(remoteJSON, localJSON){
+    let remote = [], local = [];
+    try{ remote = JSON.parse(remoteJSON) || []; }catch(e){}
+    try{ local = JSON.parse(localJSON) || []; }catch(e){}
+    const byId = {};
+    remote.forEach(e => { byId[e.siteID] = e; });
+    local.forEach(e => {
+      const existing = byId[e.siteID];
+      if(!existing || (e.updatedAt||0) >= (existing.updatedAt||0)) byId[e.siteID] = e;
+    });
+    return JSON.stringify(Object.values(byId));
+  }
+  // Pushes one key to the server, merging pat_index instead of overwriting it.
+  async function pushKey(key, value){
+    if(key === 'pat_index'){
+      let merged = value;
+      try{ merged = mergeIndexes(await remoteGet('pat_index'), value); }catch(e){ /* nothing remote yet */ }
+      await remoteSet('pat_index', merged);
+      return merged;
+    }
+    await remoteSet(key, value);
+    return value;
+  }
+
+  let syncTimer = null;
+  function scheduleSyncRetry(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncDirty, 4000); }
+  async function syncDirty(){
+    if(!navigator.onLine) return;
+    let all;
+    try{ all = await idbAll(); }catch(e){ return; }
+    const dirty = all.filter(r => r.dirty);
+    for(const rec of dirty){
+      try{
+        const pushed = await pushKey(rec.key, rec.value);
+        await idbSet(rec.key, pushed, false);
+      }catch(e){ /* still unreachable — stays pending, we'll retry again later */ }
+    }
+    if(typeof updateSyncBadge === 'function') updateSyncBadge();
+  }
+  window.addEventListener('online', syncDirty);
+  setInterval(syncDirty, 30000);
+
   window.storage = {
     async get(key, shared){
-      const res = await fetch('/api/kv/' + encodeURIComponent(key));
-      if(res.status === 404) throw new Error('not found');
-      if(!res.ok) throw new Error('Storage get failed: ' + res.status);
-      const data = await res.json();
-      return { key, value: data.value, shared };
-    },
-    async set(key, value, shared){
-      const res = await fetch('/api/kv/' + encodeURIComponent(key), {
-        method: 'PUT',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ value }),
-      });
-      if(!res.ok) throw new Error('Storage set failed: ' + res.status);
+      const local = await idbGet(key);
+      if(local) return { key, value: local.value, shared };
+      const value = await remoteGet(key); // throws 'not found' if missing everywhere
+      idbSet(key, value, false).catch(()=>{});
       return { key, value, shared };
     },
+    async set(key, value, shared){
+      await idbSet(key, value, true);
+      try{
+        const pushed = await pushKey(key, value);
+        await idbSet(key, pushed, false);
+        if(typeof updateSyncBadge === 'function') updateSyncBadge();
+        return { key, value: pushed, shared, synced: true };
+      }catch(e){
+        scheduleSyncRetry();
+        if(typeof updateSyncBadge === 'function') updateSyncBadge();
+        return { key, value, shared, synced: false };
+      }
+    },
     async delete(key, shared){
-      const res = await fetch('/api/kv/' + encodeURIComponent(key), { method: 'DELETE' });
-      if(!res.ok) throw new Error('Storage delete failed: ' + res.status);
+      await idbDelete(key);
+      try{ await remoteDelete(key); }catch(e){ /* best-effort */ }
       return { key, deleted: true, shared };
     },
     async list(prefix, shared){
-      const res = await fetch('/api/kv-list?prefix=' + encodeURIComponent(prefix||''));
-      if(!res.ok) throw new Error('Storage list failed: ' + res.status);
-      const data = await res.json();
-      return { keys: data.keys||[], prefix, shared };
+      const localAll = await idbAll();
+      const localKeys = localAll.filter(r => !prefix || r.key.startsWith(prefix)).map(r => r.key);
+      let remoteKeys = [];
+      try{ remoteKeys = await remoteList(prefix); }catch(e){ /* offline — use local only */ }
+      return { keys: Array.from(new Set([...localKeys, ...remoteKeys])), prefix, shared };
+    },
+    // Convenience for UI: how many records are waiting to sync, and whether
+    // one specific key is among them.
+    async pendingCount(){
+      try{ return (await idbAll()).filter(r => r.dirty).length; }catch(e){ return 0; }
+    },
+    async isPending(key){
+      try{ const r = await idbGet(key); return !!(r && r.dirty); }catch(e){ return false; }
     },
   };
 }
@@ -799,15 +944,25 @@ async function doSaveSite(record, silent){
     };
     if(idx>=0) SITE_INDEX[idx] = entry; else SITE_INDEX.push(entry);
     await saveIndex();
-    if(!silent) showToast('Inspection saved');
-    setSaveIndicator('Saved just now');
+    // r.synced is only meaningful for the standalone-deployed shim (which
+    // reports whether the save actually reached the server or is only
+    // saved on this device so far). Inside Claude.ai, r.synced is
+    // undefined, so we just say "Saved" — that path has no offline mode.
+    if(r.synced === false){
+      if(!silent) showToast('Saved on this device — will sync when back online');
+      setSaveIndicator('Saved on this device \u00b7 syncing later');
+    }else{
+      if(!silent) showToast('Inspection saved');
+      setSaveIndicator('Saved just now');
+    }
     return true;
   }catch(e){
     console.error(e);
-    if(!silent) showToast('Save failed — connection hiccup, will retry shortly');
-    setSaveIndicator('Save failed — will retry');
-    clearTimeout(SAVE_TIMER);
-    SAVE_TIMER = setTimeout(()=>{ if(CURRENT_RECORD) saveSite(CURRENT_RECORD, true); }, 4000);
+    // A genuine error here (as opposed to the offline case above, which
+    // never throws) is rare — the storage shim already treats connectivity
+    // problems as normal and handles them without raising an error.
+    if(!silent) showToast('Could not save — please check the app and try again');
+    setSaveIndicator('Save failed');
     return false;
   }
 }
@@ -996,24 +1151,44 @@ function themeToggleHTML(){
 
 function topbar(opts){
   opts = opts || {};
+  const showSyncPill = window.storage && typeof window.storage.pendingCount === 'function';
   return `<div class="topbar">
     <div class="brand" onclick="goHome()">
       <div class="brand-mark-chip"><img src="${LOGO_DATA_URI}" alt="edotco"></div>
       <div class="brand-text"><b>PAT Inspector</b><span>Edotco Cambodia</span></div>
     </div>
     <div class="topbar-spacer"></div>
-    <div class="topbar-right">${opts.right||''}${themeToggleHTML()}${vpToggleHTML()}</div>
+    <div class="topbar-right">${opts.right||''}${showSyncPill?'<span class="sync-pill" id="syncPill">\u2013</span>':''}${themeToggleHTML()}${vpToggleHTML()}</div>
   </div>`;
 }
 function goHome(){ VIEW='home'; render(); }
 
+async function updateSyncBadge(){
+  const el = document.getElementById('syncPill');
+  if(!el || !window.storage || typeof window.storage.pendingCount !== 'function') return;
+  const online = navigator.onLine;
+  let pending = 0;
+  try{ pending = await window.storage.pendingCount(); }catch(e){}
+  el.className = 'sync-pill ' + (!online ? 'sp-offline' : pending>0 ? 'sp-pending' : 'sp-synced');
+  el.textContent = !online ? '\u25cb Offline' : pending>0 ? '\u25d0 ' + pending + ' pending sync' : '\u25cf Synced';
+  el.title = !online
+    ? 'No internet connection right now — everything you fill in is saved on this device and will sync automatically once you\u2019re back online.'
+    : pending>0
+      ? pending + ' inspection record(s) saved on this device, still waiting to reach the server.'
+      : 'Everything is saved on the server.';
+}
+window.addEventListener('online', updateSyncBadge);
+window.addEventListener('offline', updateSyncBadge);
+setInterval(updateSyncBadge, 5000);
+
 function render(){
   const app = document.getElementById('app');
-  if(VIEW==='home') return renderHome(app);
-  if(VIEW==='field-list') return renderFieldList(app);
-  if(VIEW==='editor') return renderEditor(app);
-  if(VIEW==='admin-login') return renderAdminLogin(app);
-  if(VIEW==='admin') return renderAdmin(app);
+  if(VIEW==='home') renderHome(app);
+  else if(VIEW==='field-list') renderFieldList(app);
+  else if(VIEW==='editor') renderEditor(app);
+  else if(VIEW==='admin-login') renderAdminLogin(app);
+  else if(VIEW==='admin') renderAdmin(app);
+  updateSyncBadge();
 }
 
 function renderHome(app){
@@ -2297,6 +2472,17 @@ try{
     String((e && e.stack) || e).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre></div>';
 }
 window.addEventListener('error', function(e){ console.error('Uncaught error:', e.error || e.message); });
+
+// Offline app-shell support: only meaningful (and only reliably available)
+// when this is the standalone-deployed version, not the Claude.ai artifact
+// sandbox — same signal we already use for the storage shim. Wrapped
+// defensively since Service Worker registration can be blocked or simply
+// unavailable in some contexts, and that should never break the app.
+if('serviceWorker' in navigator && typeof window.storage !== 'undefined' && typeof window.storage.pendingCount === 'function'){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(){ /* offline-shell just won't be available; app still works online */ });
+  });
+}
 
 </script>
 </body>
